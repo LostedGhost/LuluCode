@@ -50,6 +50,7 @@ class RenduSimple:
         self._click = click
 
     def etat(self, version: str, profil: str, mode: str, dossier: str) -> None:
+        # Gris clair sur toute la ligne d'état, per la demande d'affichage.
         self._click.echo(
             f"LuluCode {version}  |  profil {profil}  |  mode {mode}  |  dossier {dossier}"
         )
@@ -60,9 +61,13 @@ class RenduSimple:
     def texte_agent(self, texte: str) -> None:
         self._click.echo(texte)
 
+    def curseur(self, actif: bool) -> None:
+        """Change la forme du curseur du terminal (sans effet sans Rich)."""
+        pass
+
     def outil(self, nom: str, resume_args: str) -> None:
         etiquette = _ETIQUETTES.get(nom, "outil")
-        self._click.echo(f"  [{etiquette}] {nom} {resume_args}")
+        self._click.echo(f"  [{etiquette}] {resume_args or nom}")
 
     def diff(self, chemin: str, texte_diff: str) -> None:
         self._click.echo(f"  [diff] {chemin}")
@@ -121,23 +126,40 @@ class RenduRiche:
     def etat(self, version: str, profil: str, mode: str, dossier: str) -> None:
         from rich.text import Text
 
-        # Reproduit la ligne 33 de terminal.svg avec accents cyan/vert.
+        # Toute la ligne d'état en gris clair (SECONDAIRE #8b949e),
+        # « LuluCode » distinct en gras gris — le contenu utile
+        # (réponses de l'agent) reste en blanc.
         bloc = Text()
-        bloc.append("LuluCode ", style=f"bold {CYAN}")
+        bloc.append("LuluCode ", style=f"bold {SECONDAIRE}")
         bloc.append(version, style=SECONDAIRE)
         bloc.append("  |  profil ", style=SECONDAIRE)
-        bloc.append(profil, style=TEXTE)
+        bloc.append(profil, style=SECONDAIRE)
         bloc.append("  |  mode ", style=SECONDAIRE)
-        bloc.append(mode, style=TEXTE)
+        bloc.append(mode, style=SECONDAIRE)
         bloc.append("  |  dossier ", style=SECONDAIRE)
-        bloc.append(dossier, style=TEXTE)
+        bloc.append(dossier, style=SECONDAIRE)
         self.console.print(bloc)
 
     def invite(self) -> str:
-        return f"[bold cyan]>[/bold cyan]"
+        return ">"
 
     def texte_agent(self, texte: str) -> None:
-        self.console.print(f"[texte]{texte}[/texte]")
+        self.console.print(texte, style="bold bright_white")
+
+    def curseur(self, actif: bool) -> None:
+        """Curseur d'écriture cyan : séquence OSC 12 (Windows Terminal,
+        iTerm2, kitty...) ; sans effet ailleurs, sans exception.
+        """
+        try:
+            import sys as _sys
+
+            if not self.console.is_terminal:
+                return
+            # OSC 12 : change la couleur du curseur du terminal.
+            _sys.stdout.write(f"\x1b]12;{CYAN}\x07")
+            _sys.stdout.flush()
+        except Exception:
+            pass  # terminal non compatible : aucun effet, aucune erreur
 
     def outil(self, nom: str, resume_args: str) -> None:
         # Gabarit de terminal.svg : « [lecture] src/factures.py » —

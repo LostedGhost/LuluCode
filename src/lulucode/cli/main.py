@@ -89,7 +89,7 @@ def run(profil: str | None, mode: str, tache: str | None) -> None:
 
 async def _ou_mono_tache(agent: object, tache: str | None, rendu: object) -> None:
     """Exécute une tâche unique si donnée, sinon lance la boucle interactive."""
-    if tache and tache.strip():
+    if tache and tache.strip() and not veut_sortir(tache):
         texte = await agent.execute(
             tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu)
         )
@@ -99,30 +99,49 @@ async def _ou_mono_tache(agent: object, tache: str | None, rendu: object) -> Non
     await _boucle_session(agent, rendu)
 
 
+"""Sortie de session : « exit » (ou « quit », « /quitter », « /exit »),
+insensible à la casse et aux espaces, coupe l'agent.
+"""
+_MOTS_SORTIE = frozenset({"exit", "quit", "quitter", "/exit", "/quit", "/quitter"})
+
+
+def veut_sortir(texte: str) -> bool:
+    """True si la saisie demande la fin de la session."""
+    return texte.strip().lower() in _MOTS_SORTIE
+
+
 async def _boucle_session(agent: object, rendu: object) -> None:
     """Boucle interactive : l'utilisateur tape une tâche, le cœur s'exécute."""
     import click
 
+    rendu.curseur(True)  # curseur d'écriture cyan tant que la session tourne
     while True:
         try:
             tache = click.prompt(click.style(rendu.invite(), fg="cyan", bold=True),
                                   default="", show_default=False)
         except (KeyboardInterrupt, EOFError):
+            rendu.curseur(False)
+            rendu.au_revoir()
+            return
+        if veut_sortir(tache):
+            rendu.curseur(False)
             rendu.au_revoir()
             return
         if not tache.strip():
             continue
-        if tache == "/aide":
-            rendu.texte_agent("Commandes : /aide (cette liste), /quitter")
+        if tache.strip().lower() == "/aide":
+            rendu.texte_agent("Commandes : /aide (cette liste), exit ou /quitter (sortir)")
             continue
-        if tache == "/quitter":
-            rendu.au_revoir()
-            return
+        if tache.strip().lower() == "/journal":
+            rendu.texte_agent("(à venir : journal des actions)")
+            continue
+        rendu.curseur(False)  # pas de curseur barre pendant l'exécution
         texte = await agent.execute(
             tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu)
         )
         if texte:
             rendu.texte_agent(texte)
+        rendu.curseur(True)
 
 
 class _EmetteurTerminal:
@@ -164,6 +183,32 @@ def _permission_terminal(rendu: object):
         return choix in ("o", "s")
 
     return _demande
+
+
+@app.command()
+@click.option("--version-cible", "-v", default=None,
+              help="Installer cette version précise (tag git ou numéro PyPI)")
+@click.argument("version_positionnee", required=False, default=None)
+def update(version_cible: str | None, version_positionnee: str | None) -> None:
+    """Met lulucode à jour, ou installe une version précise."""
+    from lulucode.cli.render import cree_rendu
+    from lulucode.cli.update import liste_versions, mets_a_jour, version_actuelle
+
+    rendu = cree_rendu()
+    version = version_cible or version_positionnee
+
+    if not version:
+        rendu.texte_agent(f"Version actuelle : {version_actuelle()}")
+        disponibles = liste_versions()
+        if disponibles and disponibles[-1] != version_actuelle():
+            rendu.texte_agent(f"Versions disponibles : {', '.join(disponibles)}")
+        elif disponibles:
+            rendu.texte_agent("Aucune autre version disponible.")
+
+    code, journal = mets_a_jour(version)
+    for ligne in journal:
+        rendu.texte_agent(f"  {ligne}") if not ligne.startswith("installation") else rendu.texte_agent(ligne)
+    sys.exit(code)
 
 
 app.add_command(config)
