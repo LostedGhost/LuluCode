@@ -123,7 +123,7 @@ class Session:
                 permission=_permission_session(self.rendu),
                 sur_ecriture=ecrivain.fragment,
             )
-        self.figes_avant()
+        fige_en_markdown(self)  # le reste du flux : brut -> Markdown figé
 
     # --- boucle ------------------------------------------------------------
     async def boucle(self) -> None:
@@ -197,7 +197,13 @@ class Session:
 
 
 class _EcrivainStream:
-    """Accumule les fragments du modèle et met à jour le bloc courant."""
+    """Accumule les fragments du modèle et met à jour le bloc courant.
+
+    Pendant le flux, le bloc courant est du TEXTE BRUT (no_wrap, pas de
+    reflow Markdown) : chaque fragment reste inchangé à l'écran, comme
+    une machine à écrire. À la fin du flux, le bloc est figé puis
+    re-rendu en Markdown complet (titres, tableaux, gras).
+    """
 
     def __init__(self, session: Session, live: Any) -> None:
         self.session = session
@@ -206,8 +212,23 @@ class _EcrivainStream:
     def fragment(self, fragment: str) -> None:
         self.session.figes_avant()
         self.session.tampon_stream += fragment
-        self.session.courant = self.session.rendu.blob_texte(self.session.tampon_stream)
+        from rich.text import Text
+
+        self.session.courant = Text(
+            self.session.tampon_stream, style=TEXTE_BLANC, no_wrap=True, overflow="ignore"
+        )
         self.live.update(self.session.ecran())
+
+
+def fige_en_markdown(session: Session) -> None:
+    """Fige le bloc courant en le convertissant en Markdown rendu."""
+    if session.courant is None:
+        return
+    contenu = session.tampon_stream
+    session.courant = None
+    session.tampon_stream = ""
+    if contenu.strip():
+        session.ajoute_bloc(blob_texte(contenu))
 
 
 class _EmetteurSession:
@@ -221,15 +242,14 @@ class _EmetteurSession:
 
         r = self.session.rendu
         if evenement.type is Kind.TEXTE:
-            # Streaming : le fragment a déjà été affiché au fil de l'eau.
-            # Mode non-streamé : le bloc va au journal direct.
-            if not evenement.donnees.get("deja_affiche"):
+            if evenement.donnees.get("deja_affiche"):
+                # Fin du stream : le texte brut courant devient un bloc
+                # Markdown figé (titres, tableaux, gras) dans le journal.
+                fige_en_markdown(self.session)
+            else:
+                # Mode non-streamé : Markdown direct.
                 self.session.figes_avant()
                 self.session.ajoute_bloc(r.blob_texte(evenement.donnees.get("texte", "")))
-            else:
-                # Fin du stream : on Fige le bloc courant (texte complet
-                # déjà rendu) pour que le journal le garde tel quel.
-                self.session.fige_courant()
         elif evenement.type is Kind.OUTIL_APPEL:
             args = evenement.donnees.get("arguments", {})
             cible = (args.get("chemin") or args.get("commande")
