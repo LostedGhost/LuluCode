@@ -112,8 +112,15 @@ class Agent:
         *,
         emetteur: Collecteur | Any = None,
         permission: PermissionCallback | None = None,
+        sur_ecriture: Any | None = None,
     ) -> str:
-        """Exécute une tâche jusqu'à sa fin ou un plafond. Renvoie le texte final."""
+        """Exécute une tâche jusqu'à sa fin ou un plafond. Renvoie le texte final.
+
+        Avec `sur_ecriture`, chaque fragment de texte du modèle est poussé
+        au fil de l'eau (streaming). L'événement TEXTE n'est alors émis
+        qu'une fois par étape, à la fin du flux, avec le texte complet :
+        les façades qui streame déjà ne doivent pas réimprimer.
+        """
         emetteur = emetteur or Collecteur()
         permission = permission or _permission_refusee
         messages: list[dict[str, Any]] = [
@@ -130,13 +137,24 @@ class Agent:
 
         for etape in range(1, self.plafonds.etapes + 1):
             try:
-                reponse = self.client.completions(messages, outils=outils_schema)
+                if sur_ecriture is not None:
+                    reponse = self.client.completions(
+                        messages, outils=outils_schema, sur_ecriture=sur_ecriture
+                    )
+                    if reponse.texte:
+                        # Le fragment a déjà été affiché par la façade :
+                        # un événement TEXTE complet la ferait dupliquer.
+                        emetteur.emettre(Evenement(
+                            Kind.TEXTE, {"texte": reponse.texte, "deja_affiche": True}
+                        ))
+                else:
+                    reponse = self.client.completions(messages, outils=outils_schema)
+                    if reponse.texte:
+                        emetteur.emettre(Evenement(Kind.TEXTE, {"texte": reponse.texte}))
             except ErreurModele as e:
                 emetteur.emettre(Evenement(Kind.ERREUR, {"message": str(e)}))
                 return f"erreur modèle : {e}"
 
-            if reponse.texte:
-                emetteur.emettre(Evenement(Kind.TEXTE, {"texte": reponse.texte}))
             if reponse.outil is None:
                 emetteur.emettre(Evenement(Kind.TACHE_TERMINEE, {"etapes": etape}))
                 return reponse.texte

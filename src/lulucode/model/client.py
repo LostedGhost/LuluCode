@@ -131,8 +131,32 @@ class ClientModele:
         self,
         messages: list[dict[str, Any]],
         outils: list[dict[str, Any]] | None = None,
+        *,
+        sur_ecriture: Any | None = None,
     ) -> ReponseModele:
-        """Appelle le modèle et extrait texte ou appel d'outil."""
+        """Appelle le modèle et extrait texte ou appel d'outil.
+
+        Avec `sur_ecriture` (callable recevant chaque fragment de texte),
+        l'appel est en streaming : le texte s'affiche au fur et à mesure,
+        comme sur les agents modernes. Si le serveur ne tient pas le
+        format SSE, on retombe silencieusement sur un appel normal.
+        """
+        if sur_ecriture is not None:
+            try:
+                return self._completions_stream(
+                    messages, outils, sur_ecriture
+                )
+            except ErreurModele:
+                raise
+            except Exception:
+                pass  # format SSE non tenu : repli normal
+        return self._completions_normal(messages, outils)
+
+    def _completions_normal(
+        self,
+        messages: list[dict[str, Any]],
+        outils: list[dict[str, Any]] | None = None,
+    ) -> ReponseModele:
         corps: dict[str, Any] = {"model": self.profil.model, "messages": messages}
         if outils:
             corps["tools"] = outils
@@ -155,6 +179,64 @@ class ClientModele:
                 arguments=json.loads(appel.get("arguments") or "{}"),
             )
         return ReponseModele(texte=choix.get("content") or "")
+
+    def _completions_stream(
+        self,
+        messages: list[dict[str, Any]],
+        outils: list[dict[str, Any]] | None,
+        sur_ecriture: Any,
+    ) -> ReponseModele:
+        """Appel en streaming SSE : chaque fragment est poussé à sur_ecriture.
+
+        Les appels d'outil y sont plus rares (le delta porte alors des
+        fragments d'arguments) ; ici on ne streame que le texte pur. Un
+        appel d'outil en plein stream bascule le rendu en appel d'outil.
+        """
+        corps: dict[str, Any] = {
+            "model": self.profil.model,
+            "messages": messages,
+            "stream": True,
+        }
+        if outils:
+            corps["tools"] = outils
+
+        texte: list[str] = []
+        outil: str | None = None
+        args_str: list[str] = []
+
+        try:
+            with self._client.stream("POST", "/chat/completions", json=corps) as flux:
+                flux.raise_for_status()
+                for ligne in flux.iter_lines():
+                    if not ligne or not ligne.startswith("data: "):
+                        continue
+                    charge = ligne[len("data: "):]
+                    if charge.strip() == "[DONE]":
+                        break
+                    try:
+                        morceau = json.loads(charge)
+                    except ValueError:
+                        continue
+                    delta = morceau.get("choices", [{}])[0].get("delta", {})
+                    if fragment := delta.get("content"):
+                        texte.append(fragment)
+                        sur_ecriture(fragment)
+                    if appels := delta.get("tool_calls"):
+                        premier = appels[0]
+                        if fn := premier.get("function", {}).get("name"):
+                            outil = fn
+                        if args := premier.get("function", {}).get("arguments"):
+                            args_str.append(args)
+        except httpx.HTTPError as e:
+            raise ErreurModele(f"appel du modèle impossible : {e}") from e
+
+        if outil:
+            try:
+                arguments = json.loads("".join(args_str) or "{}")
+            except ValueError:
+                arguments = {}
+            return ReponseModele(texte="".join(texte), outil=outil, arguments=arguments)
+        return ReponseModele(texte="".join(texte))
 
     def close(self) -> None:
         self._client.close()

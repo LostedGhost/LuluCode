@@ -302,6 +302,10 @@ class RenduRiche:
         self.console.print(bloc)
 
 
+# --- délégués du rendu vers les blocs (session plein écran) -------------------
+# (l'activation a lieu en bas de module, après la définition des blocs)
+
+
 def _niveau_outil(nom: str) -> int:
     """Niveau de risque de l'outil, pour colorer le glyphe (0 à 3)."""
     try:
@@ -312,6 +316,84 @@ def _niveau_outil(nom: str) -> int:
         return 0
 
 
+# --- blocs retournebles (session plein écran) -------------------------------
+
+
+def bloc_utilisateur(tache: str) -> Any:
+    from rich.text import Text
+
+    bloc = Text()
+    bloc.append("> ", style=f"bold {CYAN}")
+    bloc.append(tache, style=f"bold {TEXTE}")
+    return bloc
+
+
+def blob_texte(texte: str) -> Any:
+    from rich.markdown import Markdown
+
+    return Markdown(texte or "")
+
+
+def outil_bloque(nom: str, cible: str) -> Any:
+    from rich.text import Text
+
+    niveau = int(_niveau_outil(nom))
+    etiquette = _ETIQUETTES.get(nom, "outil")
+    couleur = (VERT, JAUNE, JAUNE, ROUGE)[max(0, min(3, niveau))]
+    bloc = Text()
+    bloc.append(f"  {GLYPHE} ", style=f"bold {couleur}")
+    bloc.append(f"{etiquette}", style=SECONDAIRE)
+    if cible:
+        bloc.append(" · ", style=SECONDAIRE)
+        bloc.append(cible, style=TEXTE)
+    return bloc
+
+
+def diff_bloque(chemin: str, texte_diff: str) -> Any:
+    from rich.panel import Panel
+    from rich.text import Text
+
+    bloc = Text()
+    lignes = texte_diff.splitlines()
+    for i, ligne in enumerate(lignes):
+        final = "" if i == len(lignes) - 1 else "\n"
+        if ligne.startswith("+"):
+            bloc.append(f"{ligne}{final}", style=VERT)
+        elif ligne.startswith("-"):
+            bloc.append(f"{ligne}{final}", style=ROUGE)
+        elif ligne.startswith("@@"):
+            bloc.append(f"{ligne}{final}", style=SECONDAIRE)
+        else:
+            bloc.append(f"{ligne}{final}", style=TEXTE)
+    return Panel(
+        bloc,
+        title=Text(chemin, style=SECONDAIRE),
+        border_style=BORDE,
+        style=f"on {PANNEAU}",
+        padding=(0, 2),
+    )
+
+
+def erreur_bloque(message: str) -> Any:
+    from rich.text import Text
+
+    bloc = Text()
+    bloc.append(f"  {GLYPHE} ", style=f"bold {ROUGE}")
+    bloc.append("erreur · ", style=ROUGE)
+    bloc.append(message, style=TEXTE)
+    return bloc
+
+
+def plafond_bloque(raison: str) -> Any:
+    from rich.text import Text
+
+    bloc = Text()
+    bloc.append(f"  {GLYPHE} ", style=f"bold {JAUNE}")
+    bloc.append("plafond · ", style=JAUNE)
+    bloc.append(raison, style=SECONDAIRE)
+    return bloc
+
+
 def cree_rendu() -> RenduSimple | RenduRiche:
     """Rich si disponible, sinon le rendu sobre."""
     try:
@@ -319,3 +401,18 @@ def cree_rendu() -> RenduSimple | RenduRiche:
     except ImportError:
         return RenduSimple()
     return RenduRiche()
+
+
+def _branche_blocs(cls: type) -> type:
+    """Ajoute les méthodes bloc_* sur une classe de rendu (session écran)."""
+    cls.bloc_utilisateur = staticmethod(bloc_utilisateur)
+    cls.blob_texte = staticmethod(blob_texte)
+    cls.outil_bloque = staticmethod(outil_bloque)
+    cls.diff_bloque = staticmethod(diff_bloque)
+    cls.erreur_bloque = staticmethod(erreur_bloque)
+    cls.plafond_bloque = staticmethod(plafond_bloque)
+    return cls
+
+
+_branche_blocs(RenduSimple)
+_branche_blocs(RenduRiche)

@@ -88,17 +88,28 @@ def run(profil: str | None, mode: str, tache: str | None) -> None:
 
 
 async def _ou_mono_tache(agent: object, tache: str | None, rendu: object) -> None:
-    """Exécute une tâche unique si donnée, sinon lance la boucle interactive.
-
-    Idem : la réponse est déjà affichée par l'émetteur (événement TEXTE),
-    la valeur de retour n'est pas réimprimée.
-    """
+    """Exécute une tâche unique si donnée, sinon lance la session plein écran."""
     if tache and tache.strip() and not veut_sortir(tache):
         await agent.execute(
-            tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu)
+            tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu),
+            sur_ecriture=_ecrivain_simple(rendu),
         )
         return
-    await _boucle_session(agent, rendu)
+    from lulucode.cli.session import Session
+
+    session = Session(
+        agent, rendu, version=lulucode.__version__,
+        profil=str(getattr(agent, "client").profil.nom),
+        mode=str(getattr(agent, "moteur").mode.value),
+    )
+    await session.boucle()
+
+
+def _ecrivain_simple(rendu: object):
+    """Affichage en streaming pour une tâche mono (sans plein écran)."""
+    def _fragment(fragment: str) -> None:
+        rendu.console.print(fragment, end="")
+    return _fragment
 
 
 """Sortie de session : « exit » (ou « quit », « /quitter », « /exit »),
