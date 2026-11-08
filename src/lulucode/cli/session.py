@@ -217,7 +217,10 @@ class _EcrivainStream:
         self.session.courant = Text(
             self.session.tampon_stream, style=TEXTE_BLANC, no_wrap=True, overflow="ignore"
         )
-        self.live.update(self.session.ecran())
+        # Pas de live.update() ici : le Live rafraîchit à sa propre
+        # cadence (refresh_per_second), sinon chaque fragment force un
+        # reflow complet et casse la mise en page.
+        self.live.refresh()
 
 
 def fige_en_markdown(session: Session) -> None:
