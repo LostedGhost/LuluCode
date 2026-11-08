@@ -57,11 +57,14 @@ class TestRendu:
 
     def test_texte_agent_blanc(self, rendu):
         r, buf = rendu
-        r.texte_agent("Réponse du modèle.")
+        # Le texte de l'agent passe par le rendu Markdown (titres, gras).
+        r.texte_agent("# Titre\n\nCorps **gras** de la réponse.")
         brut = buf.getvalue()
-        assert "Réponse du modèle." in brut
-        # bright_white = couleur 97, ou 38;2;255;255;255 si truecolor.
-        assert ("97m" in brut) or ("255;255;255" in brut)
+        assert "Titre" in brut
+        assert "Corps" in brut
+        assert "gras" in brut
+        # ANSI émis : le Markdown est stylé, pas brut.
+        assert chr(27) in brut
 
     def test_curseur_n_leve_pas(self, rendu):
         r, buf = rendu

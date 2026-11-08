@@ -88,13 +88,15 @@ def run(profil: str | None, mode: str, tache: str | None) -> None:
 
 
 async def _ou_mono_tache(agent: object, tache: str | None, rendu: object) -> None:
-    """Exécute une tâche unique si donnée, sinon lance la boucle interactive."""
+    """Exécute une tâche unique si donnée, sinon lance la boucle interactive.
+
+    Idem : la réponse est déjà affichée par l'émetteur (événement TEXTE),
+    la valeur de retour n'est pas réimprimée.
+    """
     if tache and tache.strip() and not veut_sortir(tache):
-        texte = await agent.execute(
+        await agent.execute(
             tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu)
         )
-        if texte:
-            rendu.texte_agent(texte)
         return
     await _boucle_session(agent, rendu)
 
@@ -111,9 +113,14 @@ def veut_sortir(texte: str) -> bool:
 
 
 async def _boucle_session(agent: object, rendu: object) -> None:
-    """Boucle interactive : l'utilisateur tape une tâche, le cœur s'exécute."""
+    """Boucle interactive : l'utilisateur tape une tâche, le cœur s'exécute.
+
+    La réponse est déjà émise par l'émetteur via l'événement TEXTE ; la
+    valeur de retour n'est jamais réaffichée (sinon duplication).
+    """
     import click
 
+    rendu.banniere(lulucode.__version__, "", "")
     rendu.curseur(True)  # curseur d'écriture cyan tant que la session tourne
     while True:
         try:
@@ -130,17 +137,19 @@ async def _boucle_session(agent: object, rendu: object) -> None:
         if not tache.strip():
             continue
         if tache.strip().lower() == "/aide":
-            rendu.texte_agent("Commandes : /aide (cette liste), exit ou /quitter (sortir)")
+            rendu.texte_agent(
+                "**Commandes disponibles**\n\n"
+                "- `/aide` — cette liste\n"
+                "- `exit` ou `/quitter` — sortir de la session"
+            )
             continue
         if tache.strip().lower() == "/journal":
-            rendu.texte_agent("(à venir : journal des actions)")
+            rendu.texte_agent("*(à venir : journal des actions)*")
             continue
         rendu.curseur(False)  # pas de curseur barre pendant l'exécution
-        texte = await agent.execute(
+        await agent.execute(
             tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu)
         )
-        if texte:
-            rendu.texte_agent(texte)
         rendu.curseur(True)
 
 

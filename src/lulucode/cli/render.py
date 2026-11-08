@@ -1,17 +1,14 @@
 """Rendu terminal de LuluCode, à l'image des visuels du README (assets/).
 
-La palette et les gabarits reprennent exactement ceux des SVG :
-banner.svg, terminal.svg, permissions.svg. Riche, sans dépendance
-obligatoire : sans Rich installé, la façade retombe sur un affichage
-sobre en monochrome.
+Palette et gabarits des SVG : fond #0d1117, panneaux #161b22/bordure
+#30363d, accents cyan #22d3ee et violet #a78bfa, statuts
+vert/bleu/jaune/rouge. L'affichage des réponses suit le style des
+agents de code modernes : Markdown rendu (titres, listes, gras, blocs
+de code colorés), glyphes ⏺ pour les actions outil, encadrés pour les
+diff et les demandes de permission.
 
-Gabarits reproduits (cf. bible studio/bible.md) :
-- ligne d'état : « LuluCode 0.1 | profil local | mode normal | dossier … »
-- invite utilisateur : « > » cyan en gras
-- action outil : « [lecture] src/factures.py » vert + texte + gris
-- différence : encadré fond #161b22 bordure #30363d, lignes + vertes
-- permission : encadré jaune #d29922, question en gras, [o]/[s]/[n]
-- curseur : « ▌ » cyan (statique ; Terminal n pulse pas en texte pur)
+Riche, sans dépendance obligatoire : sans Rich installé, la façade
+retombe sur un affichage sobre en monochrome.
 """
 
 from __future__ import annotations
@@ -35,10 +32,12 @@ ROUGE = "#f85149"
 _ETIQUETTES = {
     "lire_fichier": "lecture",
     "lister_dossier": "lecture",
-    "chercher_code": "lecture",
+    "chercher_code": "recherche",
     "ecrire_fichier": "écriture",
     "lancer_commande": "commande",
 }
+
+GLYPHE = "⏺"
 
 
 class RenduSimple:
@@ -49,14 +48,18 @@ class RenduSimple:
 
         self._click = click
 
+    def banniere(self, version: str, profil: str, mode: str) -> None:
+        self._click.echo("")
+        self._click.echo("LuluCode — agent de code local. `exit` pour sortir, `/aide` pour l'aide.")
+        self._click.echo("")
+
     def etat(self, version: str, profil: str, mode: str, dossier: str) -> None:
-        # Gris clair sur toute la ligne d'état, per la demande d'affichage.
         self._click.echo(
             f"LuluCode {version}  |  profil {profil}  |  mode {mode}  |  dossier {dossier}"
         )
 
     def invite(self) -> str:
-        return ">"
+        return "> "
 
     def texte_agent(self, texte: str) -> None:
         self._click.echo(texte)
@@ -65,9 +68,10 @@ class RenduSimple:
         """Change la forme du curseur du terminal (sans effet sans Rich)."""
         pass
 
-    def outil(self, nom: str, resume_args: str) -> None:
+    def outil(self, nom: str, cible: str) -> None:
         etiquette = _ETIQUETTES.get(nom, "outil")
-        self._click.echo(f"  [{etiquette}] {resume_args or nom}")
+        suffixe = f" {cible}" if cible else ""
+        self._click.echo(f"  [lecture] {etiquette}{suffixe}")
 
     def diff(self, chemin: str, texte_diff: str) -> None:
         self._click.echo(f"  [diff] {chemin}")
@@ -94,7 +98,7 @@ class RenduSimple:
 
 
 class RenduRiche:
-    """Rendu Rich fidèle aux SVG du README."""
+    """Rendu Rich fidèle aux SVG du README, réponses en Markdown."""
 
     def __init__(self) -> None:
         from rich.console import Console
@@ -112,23 +116,40 @@ class RenduRiche:
                 "jaune": JAUNE,
                 "rouge": ROUGE,
                 "etat": SECONDAIRE,
-                "invite": f"bold {CYAN}",
-                "etiquette0": VERT,
-                "etiquette1": JAUNE,
-                "etiquette2": JAUNE,
-                "etiquette3": ROUGE,
-                "option_sure": f"bold {VERT}",
-                "option_session": f"bold {BLEU}",
-                "option_refus": f"bold {ROUGE}",
             }),
         )
+
+    # --- accueil -----------------------------------------------------------
+
+    def banniere(self, version: str, profil: str, mode: str) -> None:
+        """Encadré d'accueil, façon agents de code : identité + astuces."""
+        from rich.panel import Panel
+        from rich.text import Text
+
+        corps = Text()
+        corps.append("LuluCode", style=f"bold {CYAN}")
+        corps.append(f" {version}\n", style=SECONDAIRE)
+        corps.append("Un agent de code qui tourne chez vous.\n\n", style=TEXTE)
+        corps.append("exit", style=f"bold {CYAN}")
+        corps.append(" pour sortir   ", style=SECONDAIRE)
+        corps.append("/aide", style=f"bold {CYAN}")
+        corps.append(" pour l'aide", style=SECONDAIRE)
+        self.console.print()
+        self.console.print(
+            Panel(
+                corps,
+                border_style=CYAN,
+                style=f"on {FOND}",
+                padding=(0, 2),
+            )
+        )
+        self.console.print()
 
     def etat(self, version: str, profil: str, mode: str, dossier: str) -> None:
         from rich.text import Text
 
-        # Toute la ligne d'état en gris clair (SECONDAIRE #8b949e),
-        # « LuluCode » distinct en gras gris — le contenu utile
-        # (réponses de l'agent) reste en blanc.
+        # Toute la ligne d'état en gris clair ; le contenu utile
+        # (réponses de l'agent) est en blanc.
         bloc = Text()
         bloc.append("LuluCode ", style=f"bold {SECONDAIRE}")
         bloc.append(version, style=SECONDAIRE)
@@ -139,12 +160,22 @@ class RenduRiche:
         bloc.append("  |  dossier ", style=SECONDAIRE)
         bloc.append(dossier, style=SECONDAIRE)
         self.console.print(bloc)
+        self.console.print()
 
     def invite(self) -> str:
-        return ">"
+        return "> "
+
+    # --- réponses ----------------------------------------------------------
 
     def texte_agent(self, texte: str) -> None:
-        self.console.print(texte, style="bold bright_white")
+        """Réponse de l'agent en Markdown rendu.
+
+        Titres, listes, gras, citations et blocs de code colorés :
+        pareil aux agents de code modernes dans le terminal.
+        """
+        from rich.markdown import Markdown
+
+        self.console.print(Markdown(texte or ""))
 
     def curseur(self, actif: bool) -> None:
         """Curseur d'écriture cyan : séquence OSC 12 (Windows Terminal,
@@ -161,22 +192,27 @@ class RenduRiche:
         except Exception:
             pass  # terminal non compatible : aucun effet, aucune erreur
 
-    def outil(self, nom: str, resume_args: str) -> None:
-        # Gabarit de terminal.svg : « [lecture] src/factures.py » —
-        # étiquette colorée par niveau, cible en texte clair.
-        # Text.append évite l'interprétation des crochets du contenu
-        # (ex. [lecture]) comme styles Rich.
+    # --- actions outil ---------------------------------------------------
+
+    def outil(self, nom: str, cible: str) -> None:
+        """Ligne ⏺ colorée par niveau (vert lecture, jaune commande,
+        rouge niveau 3), libellé dim et cible en blanc.
+        """
         from rich.text import Text
 
         niveau = int(_niveau_outil(nom))
         etiquette = _ETIQUETTES.get(nom, "outil")
-        couleur = [VERT, JAUNE, JAUNE, ROUGE][max(0, min(3, niveau))]
+        couleur = (VERT, JAUNE, JAUNE, ROUGE)[max(0, min(3, niveau))]
         bloc = Text()
-        bloc.append(f"  [{etiquette}] ", style=f"bold {couleur}")
-        bloc.append(resume_args or nom, style=TEXTE)
+        bloc.append(f"  {GLYPHE} ", style=f"bold {couleur}")
+        bloc.append(f"{etiquette}", style=SECONDAIRE)
+        if cible:
+            bloc.append(" · ", style=SECONDAIRE)
+            bloc.append(cible, style=TEXTE)
         self.console.print(bloc)
 
     def diff(self, chemin: str, texte_diff: str) -> None:
+        """Bloc de différence encadré, + en vert, - en rouge."""
         from rich.panel import Panel
         from rich.text import Text
 
@@ -192,7 +228,6 @@ class RenduRiche:
                 bloc.append(f"{ligne}{final}", style=SECONDAIRE)
             else:
                 bloc.append(f"{ligne}{final}", style=TEXTE)
-        # Fond et bordure du rectangle diff de terminal.svg.
         self.console.print(
             Panel(
                 bloc,
@@ -203,15 +238,21 @@ class RenduRiche:
             )
         )
 
+    # --- contrôles ---------------------------------------------------------
+
     def erreur(self, message: str) -> None:
-        self.console.print(f"  [rouge]erreur :[/rouge] [texte]{message}[/texte]")
+        from rich.text import Text
+
+        bloc = Text()
+        bloc.append(f"  {GLYPHE} ", style=f"bold {ROUGE}")
+        bloc.append("erreur · ", style=ROUGE)
+        bloc.append(message, style=TEXTE)
+        self.console.print(bloc)
 
     def permission(self, demande: dict[str, Any]) -> str:
         from rich.panel import Panel
         from rich.prompt import Prompt
         from rich.text import Text
-
-        from lulucode.permissions.moteur import Niveau
 
         niveau = int(demande["niveau"])
         # Gabarit du rectangle jaune de terminal.svg, en Text pour éviter
@@ -245,14 +286,24 @@ class RenduRiche:
         )
 
     def plafond(self, raison: str) -> None:
-        self.console.print(f"  [jaune][plafond][/jaune] [gris]{raison}[/gris]")
+        from rich.text import Text
+
+        bloc = Text()
+        bloc.append(f"  {GLYPHE} ", style=f"bold {JAUNE}")
+        bloc.append("plafond · ", style=JAUNE)
+        bloc.append(raison, style=SECONDAIRE)
+        self.console.print(bloc)
 
     def au_revoir(self) -> None:
-        self.console.print("[gris]À bientôt.[/gris]")
+        from rich.text import Text
+
+        bloc = Text()
+        bloc.append("À bientôt.", style=SECONDAIRE)
+        self.console.print(bloc)
 
 
 def _niveau_outil(nom: str) -> int:
-    """Niveau de risque de l'outil, pour colorer l'étiquette (0 à 3)."""
+    """Niveau de risque de l'outil, pour colorer le glyphe (0 à 3)."""
     try:
         from lulucode.core.agent import OUTILS
 

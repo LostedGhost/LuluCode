@@ -59,17 +59,17 @@ class TestGabaritsSVG:
         r, buf = rendu_capte
         r.outil("lire_fichier", "src/factures.py")
         texte = texte_sans_ansi(buf.getvalue())
-        assert "[lecture] src/factures.py" in texte
+        assert "⏺ lecture · src/factures.py" in texte
 
     def test_etiquette_outil_niveau_1(self, rendu_capte):
         r, buf = rendu_capte
         r.outil("ecrire_fichier", "tests/x.py")
-        assert "[écriture] tests/x.py" in texte_sans_ansi(buf.getvalue())
+        assert "⏺ écriture · tests/x.py" in texte_sans_ansi(buf.getvalue())
 
     def test_etiquette_outil_niveau_2(self, rendu_capte):
         r, buf = rendu_capte
         r.outil("lancer_commande", "pytest -q")
-        assert "[commande] pytest -q" in texte_sans_ansi(buf.getvalue())
+        assert "⏺ commande · pytest -q" in texte_sans_ansi(buf.getvalue())
 
     def test_diff_panneau_avec_lignes_plus(self, rendu_capte):
         r, buf = rendu_capte
