@@ -226,6 +226,10 @@ class _EmetteurSession:
             if not evenement.donnees.get("deja_affiche"):
                 self.session.figes_avant()
                 self.session.ajoute_bloc(r.blob_texte(evenement.donnees.get("texte", "")))
+            else:
+                # Fin du stream : on Fige le bloc courant (texte complet
+                # déjà rendu) pour que le journal le garde tel quel.
+                self.session.fige_courant()
         elif evenement.type is Kind.OUTIL_APPEL:
             args = evenement.donnees.get("arguments", {})
             cible = (args.get("chemin") or args.get("commande")
