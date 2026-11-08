@@ -1,0 +1,51 @@
+{
+  "projet": "LuluCode — vitrine GitHub",
+  "bible": "studio/bible.md",
+  "contrainte_host": "Les SVG sont servis en <img> par GitHub : CSS interne <style> uniquement, pas de JS, pas de SMIL, pas de police distante.",
+  "plans": [
+    {
+      "id": "s01-p01",
+      "fichier": "assets/banner.svg",
+      "intention": "Comprendre en 3 secondes : agent de code open source qui tourne en local. Impression de sérieux, pas de gadget.",
+      "cadrage": "Format bannière 1200x300, composition 2 colonnes : identité à gauche, fenêtre décorative à droite.",
+      "texte": "LuluCode — Un agent de code qui tourne chez vous — pastilles : Open source, Terminal, Interface web, Ollama, DocScan",
+      "source": "code",
+      "animation": "Entree en cascade : logo puis titre (decalage 150 ms), pastilles entrent en stagger 60 ms une seule fois ; curseur cyan clignotant en boucle (seul mouvement permanent).",
+      "duree_s": null,
+      "statut": "a_faire"
+    },
+    {
+      "id": "s02-p01",
+      "fichier": "assets/terminal.svg",
+      "intention": "Voir le produit agir : lecture, diff, demande de permission. Rendre le systeme de permissions Tangible avant meme de lire la section Permissions.",
+      "cadrage": "Fenetre de terminal 900x500, pleine largeur, typography mono, sc科nario de session reel (ajout d'un test).",
+      "texte": "Session : demande utilisateur, lecture autoriee pour la session, diff propose, bloc de permission [o]/[s]/[n].",
+      "source": "code",
+      "animation": "Frappe machine a ecrire du message utilisateur une seule fois (au chargement de l'image lors du scroll) ; lignes de reponse en cascade 120 ms ; curseur final clignotant en boucle.",
+      "duree_s": null,
+      "statut": "a_faire"
+    },
+    {
+      "id": "s03-p01",
+      "fichier": "assets/architecture.svg",
+      "intention": "Prouver la conception : un coeur, deux facades, un flux d'evenements unique. Credibilite arcfhitecturale.",
+      "cadrage": "Schema vertical 1000x660 : facades (haut), flux (milieu), coeur a 4 modules (bas haut), modeles externes (bas).",
+      "texte": "Facade terminal / Facade web / Flux d'evenements / Couche modele / Permissions / Journal / Outils / Ollama, llama.cpp / Service distant / DocScan",
+      "source": "code",
+      "animation": "Couches apparaissent en cascade du haut vers le bas (300 ms) ; tirets animes sur les 4 connecteurs cles (flux perpetuel discret, 3 elements en boucle max) ; aucune autre animation.",
+      "duree_s": null,
+      "statut": "a_faire"
+    },
+    {
+      "id": "s04-p01",
+      "fichier": "assets/permissions.svg",
+      "intention": "Installer la confiance : le risque est gradue et maitrise, la decision revient toujours a l'utilisateur.",
+      "cadrage": "Schema horizontal 1000x430 : barre de risque graduée, 4 cartes de niveau, 3 boutons de decision.",
+      "texte": "Quatre niveaux de risque, trois décisions — Cartes 0 a 3 — Autoriser une fois / pour la session / Refuser",
+      "source": "code",
+      "animation": "Balayage unique de la barre de risque (clip-path, 900 ms, power3.out) puis cartes en stagger 100 ms, boutons en dernier ; pas de boucle sur cette image (le danger ne scintille pas).",
+      "duree_s": null,
+      "statut": "a_faire"
+    }
+  ]
+}

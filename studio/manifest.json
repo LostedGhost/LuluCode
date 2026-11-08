@@ -1,0 +1,35 @@
+{
+  "projet": "LuluCode — vitrine GitHub",
+  "date": "2026-11-08",
+  "regle_licences": "Aucun asset tiers : tous les fichiers sont produits par le code (SVG écrit à la main avec Claude). Aucune image de banque, aucune génération IA téléchargée, aucun logo de marque tiers. Dégradé de marque et textes LibreOffice-free, polices système uniquement.",
+  "assets": [
+    {
+      "fichier": "assets/banner.svg",
+      "provenance": "Écrit par Claude à la demande de Ludel Topanou, d'après la version précédente du même fichier (mêmes couleurs, mêmes textes), animée en CSS interne.",
+      "licence": "Apache 2.0 (projet LuluCode)",
+      "auteur": "Ludel Topanou / projet LuluCode",
+      "source_externe": "aucune"
+    },
+    {
+      "fichier": "assets/terminal.svg",
+      "provenance": "Écrit par Claude à la demande de Ludel Topanou, d'après la version précédente (même scénario visuel), entrée en cascade + curseur animé.",
+      "licence": "Apache 2.0 (projet LuluCode)",
+      "auteur": "Ludel Topanou / projet LuluCode",
+      "source_externe": "aucune"
+    },
+    {
+      "fichier": "assets/architecture.svg",
+      "provenance": "Écrit par Claude à la demande de Ludel Topanou, d'après la version précédente (même contenu), entrée en cascade + tirets de flux animés.",
+      "licence": "Apache 2.0 (projet LuluCode)",
+      "auteur": "Ludel Topanou / projet LuluCode",
+      "source_externe": "aucune"
+    },
+    {
+      "fichier": "assets/permissions.svg",
+      "provenance": "Écrit par Claude à la demande de Ludel Topanou, d'après la version précédente (même contenu), balayage de la barre + stagger des cartes.",
+      "licence": "Apache 2.0 (projet LuluCode)",
+      "auteur": "Ludel Topanou / projet LuluCode",
+      "source_externe": "aucune"
+    }
+  ]
+}
