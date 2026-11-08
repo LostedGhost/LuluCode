@@ -49,24 +49,26 @@ def config_init() -> None:
 @click.option("--tache", "-t", default=None, help="Exécute cette tâche unique puis quitte")
 def run(profil: str | None, mode: str, tache: str | None) -> None:
     """Démarre une session dans le terminal, dans le dossier courant."""
+    from lulucode.cli.render import cree_rendu
     from lulucode.model.client import ClientModele, charge_config, profil_actif
     from lulucode.permissions.moteur import Mode
 
+    rendu = cree_rendu()
     seule = Path.cwd()
     try:
         config = charge_config()
         p = profil_actif(config, profil)
     except (FileNotFoundError, ValueError) as e:
-        click.echo(f"Configuration : {e}", err=True)
+        rendu.erreur(str(e))
         sys.exit(1)
 
     try:
         mode_perm = Mode(mode)
     except ValueError:
-        click.echo(f"Mode inconnu : {mode} (normal, strict, lecture-seule)", err=True)
+        rendu.erreur(f"Mode inconnu : {mode} (normal, strict, lecture-seule)")
         sys.exit(1)
 
-    click.echo(f"LuluCode {lulucode.__version__}  |  profil {p.nom}  |  mode {mode_perm.value}  |  dossier {seule}")
+    rendu.etat(lulucode.__version__, p.nom, mode_perm.value, str(seule))
 
     from lulucode.core.agent import Agent, Plafonds
     from lulucode.permissions.moteur import Moteur
@@ -82,76 +84,86 @@ def run(profil: str | None, mode: str, tache: str | None) -> None:
         ),
     )
 
-    asyncio.run(_ou_mono_tache(agent, tache))
+    asyncio.run(_ou_mono_tache(agent, tache, rendu))
 
 
-async def _ou_mono_tache(agent: object, tache: str | None) -> None:
+async def _ou_mono_tache(agent: object, tache: str | None, rendu: object) -> None:
     """Exécute une tâche unique si donnée, sinon lance la boucle interactive."""
     if tache and tache.strip():
-        texte = await agent.execute(tache, emetteur=_EmetteurTerminal(), permission=_permission_terminal)
-        click.echo(texte if texte else "(terminé)")
+        texte = await agent.execute(
+            tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu)
+        )
+        if texte:
+            rendu.texte_agent(texte)
         return
-    await _boucle_session(agent)
+    await _boucle_session(agent, rendu)
 
 
-async def _boucle_session(agent: object) -> None:
+async def _boucle_session(agent: object, rendu: object) -> None:
     """Boucle interactive : l'utilisateur tape une tâche, le cœur s'exécute."""
+    import click
+
     while True:
         try:
-            tache = click.prompt(click.style(">", fg="cyan", bold=True), default="", show_default=False)
+            tache = click.prompt(click.style(rendu.invite(), fg="cyan", bold=True),
+                                  default="", show_default=False)
         except (KeyboardInterrupt, EOFError):
-            click.echo("\nÀ bientôt.")
+            rendu.au_revoir()
             return
         if not tache.strip():
             continue
         if tache == "/aide":
-            click.echo("Commandes : /aide (cette liste), /quitter")
+            rendu.texte_agent("Commandes : /aide (cette liste), /quitter")
             continue
         if tache == "/quitter":
-            click.echo("À bientôt.")
+            rendu.au_revoir()
             return
-        click.echo("…")
-        texte = await agent.execute(tache, emetteur=_EmetteurTerminal(), permission=_permission_terminal)
-        click.echo(texte if texte else "(terminé)")
+        texte = await agent.execute(
+            tache, emetteur=_EmetteurTerminal(rendu), permission=_permission_terminal(rendu)
+        )
+        if texte:
+            rendu.texte_agent(texte)
 
 
 class _EmetteurTerminal:
-    """Affiche les événements du cœur dans le terminal."""
+    """Affiche les événements du cœur dans le terminal, style des SVG."""
+
+    def __init__(self, rendu: object) -> None:
+        self.rendu = rendu
 
     def emettre(self, evenement: object) -> None:
         from lulucode.core.events import Kind
 
         if evenement.type is Kind.TEXTE:
-            click.echo(evenement.donnees.get("texte", ""))
+            self.rendu.texte_agent(evenement.donnees.get("texte", ""))
         elif evenement.type is Kind.OUTIL_APPEL:
             args = evenement.donnees.get("arguments", {})
-            resume = ", ".join(f"{k}={str(v)[:40]!r}" for k, v in args.items())
-            click.echo(f"  [outil] {evenement.donnees.get('outil')} {resume}")
+            # Cible lisible au gabarit des SVG : le chemin ou la commande
+            # d'abord, sinon un résumé compact des arguments.
+            cible = (args.get("chemin") or args.get("commande")
+                     or args.get("motif") or ", ".join(f"{k}={str(v)[:40]}" for k, v in args.items()))
+            self.rendu.outil(evenement.donnees.get("outil", ""), str(cible))
+        elif evenement.type is Kind.OUTIL_RESULTAT:
+            pass  # déjà affiché via OUTIL_APPEL / DIFF
         elif evenement.type is Kind.DIFF:
-            click.echo(f"  [diff] {evenement.donnees.get('chemin')}")
+            self.rendu.diff(evenement.donnees.get("chemin", ""), evenement.donnees.get("diff", ""))
+        elif evenement.type is Kind.PLAFOND:
+            self.rendu.plafond(str(evenement.donnees.get("raison", "")))
         elif evenement.type is Kind.ERREUR:
-            click.echo(f"  [erreur] {evenement.donnees.get('message')}", err=True)
+            self.rendu.erreur(str(evenement.donnees.get("message", "")))
 
 
-async def _permission_terminal(demande: dict) -> bool:
+def _permission_terminal(rendu: object):
     """Demande à l'utilisateur : une fois / pour la session / refuser.
 
     Le cœur mémorise l'autorisation pour la session après une réponse True ;
     le niveau 3 n'est jamais mémorisé (garantie du moteur).
     """
-    from lulucode.permissions.moteur import Niveau
-
-    niveau = Niveau(demande["niveau"])
-    click.echo(click.style(f"  [permission] {demande['outil']} (niveau {niveau.value}) — {demande['raison']}", fg="yellow"))
-    click.echo(f"  Détail : {demande.get('detail', '')[:200]}")
-    while True:
-        choix = click.prompt(
-            click.style("  [o] une fois  [s] pour la session  [n] refuser", fg="yellow"),
-            type=click.Choice(["o", "s", "n"]),
-            default="n",
-            show_default=False,
-        )
+    async def _demande(demande: dict) -> bool:
+        choix = rendu.permission(demande)
         return choix in ("o", "s")
+
+    return _demande
 
 
 app.add_command(config)
