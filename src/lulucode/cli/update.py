@@ -55,10 +55,19 @@ def detecte_installation(nom_paquet: str = "lulucode") -> Installation:
 
 
 def chemin_depuis_url(url: str) -> str | None:
-    """Convertit une URL file:/// en chemin système."""
+    """Convertit une URL file:/// en chemin système valide.
+
+    `file:///C:/projets` donne `/C:/projets` (forme POSIX) ; sous Windows
+    on retire la barre oblique initiale pour obtenir `C:/projets`.
+    """
     if not url:
         return None
-    return unquote(urlparse(url).path) or None
+    chemin = unquote(urlparse(url).path)
+    if not chemin:
+        return None
+    if chemin.startswith("/") and chemin[2:3] == ":":
+        chemin = chemin[1:]
+    return chemin
 
 
 def version_actuelle(nom_paquet: str = "lulucode") -> str:
