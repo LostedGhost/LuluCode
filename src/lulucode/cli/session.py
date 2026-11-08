@@ -155,11 +155,19 @@ class Session:
         self.rendu.console.print(self.ecran(self.suggestion))
 
     def saisie(self) -> str:
-        """Lecture de saisie : prompt_toolkit si dispo, sinon Click."""
+        """Lecture de saisie : prompt_toolkit si dispo, sinon Click.
+
+        prompt_toolkit exige une vraie console (Win32 sous Windows) :
+        sans elle, repli propre sur la saisie Click simple.
+        KeyboardInterrupt / EOFError remontent à la boucle (sortie).
+        """
         try:
             from prompt_toolkit import PromptSession
             from prompt_toolkit.history import FileHistory
+        except ImportError:
+            return self._saisie_click()
 
+        try:
             if not hasattr(self, "_pt_session"):
                 from pathlib import Path
 
@@ -170,12 +178,20 @@ class Session:
                     enable_history_search=True,
                 )
             return self._pt_session.prompt("> ").strip()
-        except ImportError:
-            import click
+        except (KeyboardInterrupt, EOFError):
+            raise  # sortie demandée : la boucle la traite
+        except Exception:
+            # Console non compatible (pipe, tmux exotique, Cygwin...) :
+            # repli propre sans planter la session.
+            return self._saisie_click()
 
+    @staticmethod
+    def _saisie_click() -> str:
+        import click
+
+        try:
             return click.prompt(click.style("> ", fg="cyan", bold=True), default="",
                                 show_default=False).strip()
-
         except (KeyboardInterrupt, EOFError):
             raise
 
