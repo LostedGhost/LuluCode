@@ -1,0 +1,639 @@
+Metadata-Version: 2.4
+Name: lulucode
+Version: 0.1.0
+Summary: Un agent de code open source qui tourne chez vous, avec le modèle de votre choix.
+Author: Ludel Topanou
+License:                                  Apache License
+                                   Version 2.0, January 2004
+                                http://www.apache.org/licenses/
+        
+           TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+        
+           1. Definitions.
+        
+              "License" shall mean the terms and conditions for use, reproduction,
+              and distribution as defined by Sections 1 through 9 of this document.
+        
+              "Licensor" shall mean the copyright owner or entity authorized by
+              the copyright owner that is granting the License.
+        
+              "Legal Entity" shall mean the union of the acting entity and all
+              other entities that control, are controlled by, or are under common
+              control with that entity. For the purposes of this definition,
+              "control" means (i) the power, direct or indirect, to cause the
+              direction or management of such entity, whether by contract or
+              otherwise, or (ii) ownership of fifty percent (50%) or more of the
+              outstanding shares, or (iii) beneficial ownership of such entity.
+        
+              "You" (or "Your") shall mean an individual or Legal Entity
+              exercising permissions granted by this License.
+        
+              "Source" form shall mean the preferred form for making modifications,
+              including but not limited to software source code, documentation
+              source, and configuration files.
+        
+              "Object" form shall mean any form resulting from mechanical
+              transformation or translation of a Source form, including but
+              not limited to compiled object code, generated documentation,
+              and conversions to other media types.
+        
+              "Work" shall mean the work of authorship, whether in Source or
+              Object form, made available under the License, as indicated by a
+              copyright notice that is included in or attached to the work
+              (an example is provided in the Appendix below).
+        
+              "Derivative Works" shall mean any work, whether in Source or Object
+              form, that is based on (or derived from) the Work and for which the
+              editorial revisions, annotations, elaborations, or other modifications
+              represent, as a whole, an original work of authorship. For the purposes
+              of this License, Derivative Works shall not include works that remain
+              separable from, or merely link (or bind by name) to the interfaces of,
+              the Work and Derivative Works thereof.
+        
+              "Contribution" shall mean any work of authorship, including
+              the original version of the Work and any modifications or additions
+              to that Work or Derivative Works thereof, that is intentionally
+              submitted to Licensor for inclusion in the Work by the copyright owner
+              or by an individual or Legal Entity authorized to submit on behalf of
+              the copyright owner. For the purposes of this definition, "submitted"
+              means any form of electronic, verbal, or written communication sent
+              to the Licensor or its representatives, including but not limited to
+              communication on electronic mailing lists, source code control systems,
+              and issue tracking systems that are managed by, or on behalf of, the
+              Licensor for the purpose of discussing and improving the Work, but
+              excluding communication that is conspicuously marked or otherwise
+              designated in writing by the copyright owner as "Not a Contribution."
+        
+              "Contributor" shall mean Licensor and any individual or Legal Entity
+              on behalf of whom a Contribution has been received by Licensor and
+              subsequently incorporated within the Work.
+        
+           2. Grant of Copyright License. Subject to the terms and conditions of
+              this License, each Contributor hereby grants to You a perpetual,
+              worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+              copyright license to reproduce, prepare Derivative Works of,
+              publicly display, publicly perform, sublicense, and distribute the
+              Work and such Derivative Works in Source or Object form.
+        
+           3. Grant of Patent License. Subject to the terms and conditions of
+              this License, each Contributor hereby grants to You a perpetual,
+              worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+              (except as stated in this section) patent license to make, have made,
+              use, offer to sell, sell, import, and otherwise transfer the Work,
+              where such license applies only to those patent claims licensable
+              by such Contributor that are necessarily infringed by their
+              Contribution(s) alone or by combination of their Contribution(s)
+              with the Work to which such Contribution(s) was submitted. If You
+              institute patent litigation against any entity (including a
+              cross-claim or counterclaim in a lawsuit) alleging that the Work
+              or a Contribution incorporated within the Work constitutes direct
+              or contributory patent infringement, then any patent licenses
+              granted to You under this License for that Work shall terminate
+              as of the date such litigation is filed.
+        
+           4. Redistribution. You may reproduce and distribute copies of the
+              Work or Derivative Works thereof in any medium, with or without
+              modifications, and in Source or Object form, provided that You
+              meet the following conditions:
+        
+              (a) You must give any other recipients of the Work or
+                  Derivative Works a copy of this License; and
+        
+              (b) You must cause any modified files to carry prominent notices
+                  stating that You changed the files; and
+        
+              (c) You must retain, in the Source form of any Derivative Works
+                  that You distribute, all copyright, patent, trademark, and
+                  attribution notices from the Source form of the Work,
+                  excluding those notices that do not pertain to any part of
+                  the Derivative Works; and
+        
+              (d) If the Work includes a "NOTICE" text file as part of its
+                  distribution, then any Derivative Works that You distribute must
+                  include a readable copy of the attribution notices contained
+                  within such NOTICE file, excluding those notices that do not
+                  pertain to any part of the Derivative Works, in at least one
+                  of the following places: within a NOTICE text file distributed
+                  as part of the Derivative Works; within the Source form or
+                  documentation, if provided along with the Derivative Works; or,
+                  within a display generated by the Derivative Works, if and
+                  wherever such third-party notices normally appear. The contents
+                  of the NOTICE file are for informational purposes only and
+                  do not modify the License. You may add Your own attribution
+                  notices within Derivative Works that You distribute, alongside
+                  or as an addendum to the NOTICE text from the Work, provided
+                  that such additional attribution notices cannot be construed
+                  as modifying the License.
+        
+              You may add Your own copyright statement to Your modifications and
+              may provide additional or different license terms and conditions
+              for use, reproduction, or distribution of Your modifications, or
+              for any such Derivative Works as a whole, provided Your use,
+              reproduction, and distribution of the Work otherwise complies with
+              the conditions stated in this License.
+        
+           5. Submission of Contributions. Unless You explicitly state otherwise,
+              any Contribution intentionally submitted for inclusion in the Work
+              by You to the Licensor shall be under the terms and conditions of
+              this License, without any additional terms or conditions.
+              Notwithstanding the above, nothing herein shall supersede or modify
+              the terms of any separate license agreement you may have executed
+              with Licensor regarding such Contributions.
+        
+           6. Trademarks. This License does not grant permission to use the trade
+              names, trademarks, service marks, or product names of the Licensor,
+              except as required for reasonable and customary use in describing the
+              origin of the Work and reproducing the content of the NOTICE file.
+        
+           7. Disclaimer of Warranty. Unless required by applicable law or
+              agreed to in writing, Licensor provides the Work (and each
+              Contributor provides its Contributions) on an "AS IS" BASIS,
+              WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+              implied, including, without limitation, any warranties or conditions
+              of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+              PARTICULAR PURPOSE. You are solely responsible for determining the
+              appropriateness of using or redistributing the Work and assume any
+              risks associated with Your exercise of permissions under this License.
+        
+           8. Limitation of Liability. In no event and under no legal theory,
+              whether in tort (including negligence), contract, or otherwise,
+              unless required by applicable law (such as deliberate and grossly
+              negligent acts) or agreed to in writing, shall any Contributor be
+              liable to You for damages, including any direct, indirect, special,
+              incidental, or consequential damages of any character arising as a
+              result of this License or out of the use or inability to use the
+              Work (including but not limited to damages for loss of goodwill,
+              work stoppage, computer failure or malfunction, or any and all
+              other commercial damages or losses), even if such Contributor
+              has been advised of the possibility of such damages.
+        
+           9. Accepting Warranty or Additional Liability. While redistributing
+              the Work or Derivative Works thereof, You may choose to offer,
+              and charge a fee for, acceptance of support, warranty, indemnity,
+              or other liability obligations and/or rights consistent with this
+              License. However, in accepting such obligations, You may act only
+              on Your own behalf and on Your sole responsibility, not on behalf
+              of any other Contributor, and only if You agree to indemnify,
+              defend, and hold each Contributor harmless for any liability
+              incurred by, or claims asserted against, such Contributor by reason
+              of your accepting any such warranty or additional liability.
+        
+           END OF TERMS AND CONDITIONS
+        
+           APPENDIX: How to apply the Apache License to your work.
+        
+              To apply the Apache License to your work, attach the following
+              boilerplate notice, with the fields enclosed by brackets "[]"
+              replaced with your own identifying information. (Don't include
+              the brackets!)  The text should be enclosed in the appropriate
+              comment syntax for the file format. We also recommend that a
+              file or class name and description of purpose be included on the
+              same "printed page" as the copyright notice for easier
+              identification within third-party archives.
+        
+           Copyright [yyyy] [name of copyright owner]
+        
+           Licensed under the Apache License, Version 2.0 (the "License");
+           you may not use this file except in compliance with the License.
+           You may obtain a copy of the License at
+        
+               http://www.apache.org/licenses/LICENSE-2.0
+        
+           Unless required by applicable law or agreed to in writing, software
+           distributed under the License is distributed on an "AS IS" BASIS,
+           WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+           See the License for the specific language governing permissions and
+           limitations under the License.
+        
+Project-URL: Homepage, https://github.com/LostedGhost/LuluCode
+Project-URL: Issues, https://github.com/LostedGhost/LuluCode/issues
+Keywords: agent,code,ollama,openai,cli
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: httpx>=0.27
+Requires-Dist: tomli-w>=1.0
+Provides-Extra: terminal
+Requires-Dist: rich>=13.7; extra == "terminal"
+Provides-Extra: web
+Requires-Dist: fastapi>=0.111; extra == "web"
+Requires-Dist: uvicorn>=0.30; extra == "web"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
+Requires-Dist: pytest-cov>=5.0; extra == "dev"
+Requires-Dist: ruff>=0.5; extra == "dev"
+Requires-Dist: mypy>=1.10; extra == "dev"
+Dynamic: license-file
+
+<div align="center">
+
+<img src="assets/banner.svg" alt="LuluCode, agent de code open source" width="100%">
+
+<br>
+<br>
+
+### Un agent de code qui tourne chez vous, avec le modèle de votre choix
+
+Un terminal et une interface web, un seul moteur.<br>
+Ollama en local ou service distant : il suffit de changer l'adresse.
+
+<br>
+
+![Licence](https://img.shields.io/badge/licence-Apache%202.0-blue)
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Statut](https://img.shields.io/badge/statut-en%20d%C3%A9veloppement-orange)
+![Ollama](https://img.shields.io/badge/Ollama-compatible-black)
+![Format](https://img.shields.io/badge/API-format%20OpenAI-412991)
+![PRs](https://img.shields.io/badge/PRs-bienvenues-brightgreen)
+
+<br>
+
+[Démarrage rapide](#démarrage-rapide) &nbsp;·&nbsp;
+[Architecture](#architecture) &nbsp;·&nbsp;
+[Permissions](#permissions) &nbsp;·&nbsp;
+[Feuille de route](#feuille-de-route) &nbsp;·&nbsp;
+[Contribuer](#contribuer)
+
+</div>
+
+<br>
+
+> [!NOTE]
+> LuluCode est en cours de développement, la version 0.1 est en préparation. Les commandes et les options décrites ici sont l'interface visée pour cette version, elles peuvent encore bouger. Voir la [feuille de route](#feuille-de-route).
+
+## Pourquoi LuluCode
+
+Les agents de code les plus connus sont pensés pour de gros modèles hébergés chez un fournisseur. LuluCode part d'un autre point de départ : votre machine, votre code, votre choix de modèle.
+
+- **Vous gardez la main.** Chaque action de l'agent passe par un système de permissions. Rien n'est écrit, lancé ou supprimé sans qu'une règle ou vous-même l'ayez autorisé.
+- **Il fonctionne aussi avec de petits modèles locaux.** Les appels d'outils sont validés avant exécution, les erreurs sont renvoyées au modèle pour qu'il se corrige, et un mode de secours existe pour les modèles qui ne gèrent pas les outils.
+- **Il lit vos documents.** Grâce à [DocScan](https://github.com/VOTRE-COMPTE/docscan), un PDF, un fichier Word ou Excel, un scan ou une photo de téléphone arrive sous forme de Markdown compact, ce qui économise des tokens.
+- **Un seul moteur.** Le terminal et l'interface web utilisent exactement le même cœur, donc le même comportement et les mêmes permissions.
+
+## Fonctionnalités
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Tous les modèles</h4>
+      Tout service qui parle le format de l'API OpenAI : Ollama, llama.cpp, ou un fournisseur distant. On passe de l'un à l'autre par un simple profil.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Permissions par niveau</h4>
+      Quatre niveaux de risque, trois décisions (une fois, session, refus), trois modes (normal, strict, lecture seule).
+    </td>
+    <td width="33%" valign="top">
+      <h4>Deux interfaces</h4>
+      Un terminal interactif et une interface web locale, avec historique, différences de fichiers côte à côte et boutons d'autorisation.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Outils pour le code</h4>
+      Lire, créer et modifier des fichiers avec affichage des différences, lancer des commandes, chercher dans le code et sur le web.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Documents avec DocScan</h4>
+      PDF, Office, scans et photos convertis en Markdown compact avant lecture, pour garder un contexte léger.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Journal complet</h4>
+      Chaque action, la décision prise et son résultat sont enregistrés. Les clés et secrets sont masqués.
+    </td>
+  </tr>
+</table>
+
+## Démarrage rapide
+
+**Prérequis**
+
+- Python 3.11 ou plus récent
+- Un modèle : soit [Ollama](https://ollama.com) installé sur votre machine, soit une clé d'accès à un service compatible avec le format OpenAI
+- Node.js 20 ou plus récent, seulement si vous voulez modifier l'interface web (pas nécessaire pour l'utiliser)
+
+**Installation**
+
+```bash
+pipx install lulucode
+```
+
+**Premier lancement avec un modèle local**
+
+```bash
+# 1. Télécharger un modèle avec Ollama
+ollama pull nom-du-modele-local
+
+# 2. Créer le fichier de configuration
+lulucode config init
+
+# 3. Se placer dans un projet et lancer l'agent
+cd ~/mon-projet
+lulucode
+```
+
+Pour l'interface web, une seule commande, puis ouvrez l'adresse affichée :
+
+```bash
+lulucode web
+```
+
+L'interface web n'écoute que sur votre machine, et un jeton d'accès est généré à chaque lancement.
+
+<div align="center">
+<img src="assets/terminal.svg" alt="Exemple de session LuluCode dans le terminal" width="760">
+</div>
+
+### Commandes utiles
+
+| Commande | Effet |
+| --- | --- |
+| `lulucode` | Démarre une session dans le terminal, dans le dossier courant |
+| `lulucode web` | Démarre l'interface web locale |
+| `lulucode --profil distant` | Utilise un autre profil de modèle pour cette session |
+| `lulucode --mode strict` | Demande une confirmation pour toute action, lectures comprises |
+| `lulucode --mode lecture-seule` | Lecture et plan uniquement, aucune écriture ni commande |
+
+Dans une session, quelques commandes commencent par une barre oblique :
+
+| Commande | Effet |
+| --- | --- |
+| `/profil` | Affiche ou change le profil de modèle |
+| `/mode` | Affiche ou change le mode de permission |
+| `/journal` | Affiche les dernières actions et leurs décisions |
+| `/aide` | Liste toutes les commandes |
+
+## Configurer un modèle
+
+Le fichier de configuration se trouve dans `~/.config/lulucode/config.toml`. Chaque profil décrit un modèle. Passer du local au distant ne demande aucun autre changement.
+
+```toml
+[profils.local]
+base_url = "http://localhost:11434/v1"
+model = "nom-du-modele-local"
+api_key = "ollama"
+contexte = 8192
+outils_natifs = true          # mettre false si le modèle ne gère pas les outils
+
+[profils.distant]
+base_url = "https://adresse-du-service/v1"
+model = "nom-du-modele-distant"
+api_key_env = "LULUCODE_CLE_DISTANTE"
+contexte = 128000
+
+[general]
+profil_par_defaut = "local"
+plafond_etapes = 40           # nombre maximal d'étapes par tâche
+plafond_tokens = 200000       # nombre maximal de tokens par tâche
+```
+
+Les clés distantes se lisent dans une variable d'environnement. Elles ne sont jamais écrites dans le fichier de configuration, ni dans le journal.
+
+| Variable | Rôle |
+| --- | --- |
+| `LULUCODE_CONFIG` | Chemin d'un fichier de configuration différent de celui par défaut |
+| `LULUCODE_PROFIL` | Profil de modèle à utiliser au lieu du profil par défaut |
+| `LULUCODE_CLE_DISTANTE` | Exemple de variable contenant la clé du profil `distant` |
+
+## Architecture
+
+LuluCode repose sur un cœur unique et deux façades qui ne font qu'afficher des événements et renvoyer les réponses de l'utilisateur.
+
+<div align="center">
+<img src="assets/architecture.svg" alt="Architecture de LuluCode : deux façades, un flux d'événements, un cœur" width="860">
+</div>
+
+Le cœur est une bibliothèque Python sans interface. Il ne sait pas s'il est piloté depuis un terminal ou un navigateur. Une demande de permission est un événement comme un autre, dont la réponse revient par le même canal : c'est ce qui garantit que les deux façades appliquent exactement les mêmes règles.
+
+### La boucle d'agent
+
+```mermaid
+sequenceDiagram
+    actor U as Utilisateur
+    participant F as Façade terminal ou web
+    participant C as Cœur
+    participant P as Permissions
+    participant M as Modèle
+    participant O as Outil
+
+    U->>F: Donne une tâche
+    F->>C: Message
+    loop Jusqu'à la fin de la tâche ou d'un plafond
+        C->>M: Conversation et outils disponibles
+        M-->>C: Texte ou appel d'outil
+        C->>C: Valide le nom et les arguments
+        C->>P: Cette action est-elle autorisée ?
+        alt Autorisée par une règle
+            P-->>C: Oui
+        else À confirmer
+            P-->>F: Demande de permission
+            F-->>U: Une fois, session ou refus ?
+            U-->>F: Décision
+            F-->>P: Décision
+            P-->>C: Oui ou refus
+        end
+        C->>O: Exécute l'action si elle est autorisée
+        O-->>C: Résultat
+    end
+    C-->>F: Réponse finale
+    F-->>U: Affichage
+```
+
+Quand une action est refusée, le refus est renvoyé au modèle, qui doit proposer autre chose.
+
+## Outils
+
+| Outil | Rôle | Niveau de risque |
+| --- | --- | :---: |
+| Lire un fichier, lister un dossier | Lecture dans la zone de travail | 0 |
+| Rechercher dans le code | Par nom de fichier et par contenu | 0 |
+| Lire un document avec DocScan | PDF, Office, scans et photos en Markdown compact | 0 |
+| Mémoire de projet | Lit `AGENTS.md` (ou `CLAUDE.md` à défaut) et les notes versionnées | 0 |
+| Créer ou modifier un fichier | Écriture, avec la différence affichée avant application | 1 |
+| Rechercher en ligne, lire une page web | Requête réseau sortante | 1 |
+| Lancer une commande | Terminal, durée limitée, sortie capturée | 2 |
+| Supprimer, écraser, administrer, sortir de la zone | Actions destructrices ou sensibles | 3 |
+
+## Permissions
+
+C'est la pièce centrale du projet : aucune action n'est exécutée sans qu'une règle l'ait autorisée.
+
+<div align="center">
+<img src="assets/permissions.svg" alt="Les quatre niveaux de risque et les trois décisions possibles" width="860">
+</div>
+
+### Modes de fonctionnement
+
+| Mode | Comportement | Quand l'utiliser |
+| --- | --- | --- |
+| Normal | Les règles de niveau décrites ci-dessus | Dans vos projets habituels |
+| Strict | Tout demande confirmation, lectures comprises | Dossier inconnu, modèle peu fiable |
+| Lecture seule | L'agent lit et propose un plan, sans écrire ni lancer de commande | Pour comprendre un projet sans rien risquer |
+
+### Règles de sécurité
+
+- **Zone de travail.** L'agent reste dans le dossier du projet. Les chemins sont résolus en chemins réels, liens symboliques compris, avant chaque vérification. Tout accès extérieur est de niveau 3.
+- **Commandes.** Une commande connue et sans danger peut être autorisée par préfixe. Une commande inconnue ou composée (enchaînements, redirections, substitutions) est traitée au niveau supérieur, car analyser un shell de façon sûre est difficile. Une liste de motifs dangereux, comme une suppression récursive, un push forcé ou l'exécution d'un script téléchargé, reste toujours de niveau 3.
+- **Injection d'instructions.** Le contenu d'une page web ou d'un document est traité comme des données, jamais comme des ordres. Toute action sensible qui en découle demande une confirmation, avec l'origine de l'instruction indiquée.
+- **Secrets.** Les clés et variables sensibles ne sont jamais envoyées au modèle, et sont masquées dans le journal et dans la sortie des commandes.
+- **Plafonds.** Nombre d'étapes et de tokens par tâche, avec affichage de la consommation.
+
+### Personnaliser les règles
+
+Un fichier par projet permet d'ajuster les règles, par exemple pour autoriser sans confirmation les commandes dont vous êtes sûr.
+
+```toml
+# .lulucode/permissions.toml
+
+[permissions]
+zone_de_travail = "."
+commandes_sures = ["git status", "git diff", "pytest", "ruff check"]
+```
+
+Les actions de niveau 3 ne peuvent jamais être ajoutées à cette liste.
+
+## Fiabilité avec les petits modèles locaux
+
+Les petits modèles appellent parfois mal les outils ou produisent un format invalide. LuluCode prévoit plusieurs garde-fous :
+
+1. **Validation avant exécution.** Le nom de l'outil et ses arguments sont vérifiés contre un schéma. Un appel invalide n'est jamais exécuté.
+2. **Correction guidée.** L'erreur est renvoyée au modèle avec un message court et précis, avec au plus deux nouvelles tentatives par appel.
+3. **Profil d'outils réduit.** Pour un petit modèle, on n'expose que les outils essentiels, parce qu'une longue liste augmente les erreurs.
+4. **Mode de secours.** Si le modèle ne gère pas nativement les appels d'outils, l'agent lui demande un bloc structuré dans le texte, qu'il analyse lui-même.
+5. **Contexte allégé.** Les longues conversations sont résumées automatiquement et les documents sont lus en Markdown compact.
+
+<details>
+<summary><b>Résultats des tests de modèles</b></summary>
+
+<br>
+
+Plusieurs modèles sont comparés sur un même jeu d'environ 20 tâches types : lire un fichier, modifier une fonction, lancer des tests, chercher dans le code, lire un PDF. Les résultats seront publiés ici avant la version 0.1, avec le script pour les reproduire.
+
+| Modèle | Appels d'outils valides | Tâches réussies | Remarques |
+| --- | :---: | :---: | --- |
+| Modèle orienté code, local | à venir | à venir | |
+| Modèle généraliste, local | à venir | à venir | |
+| Modèle distant de référence | à venir | à venir | |
+
+</details>
+
+## Lire des documents avec DocScan
+
+Quand [DocScan](https://github.com/VOTRE-COMPTE/docscan) est installé, LuluCode l'utilise automatiquement pour tout fichier qui n'est pas du texte brut. Le document est converti en Markdown compact avant d'être lu, ce qui réduit fortement le nombre de tokens envoyés au modèle.
+
+```bash
+pipx install docscan
+```
+
+DocScan est un outil optionnel, appelé par sa ligne de commande. Sans lui, LuluCode fonctionne normalement pour tout le reste.
+
+## Structure du dépôt
+
+```
+lulucode/
+  src/lulucode/
+    core/           boucle d'agent, contexte, résumé des longues conversations
+    model/          client au format OpenAI, profils, validation des appels d'outils
+    tools/          fichiers, commandes, recherche de code, web, docscan
+    permissions/    niveaux de risque, règles, décisions mémorisées, journal
+    cli/            façade terminal
+    server/         façade web (API et flux d'événements)
+  web/              interface React
+  tests/            tests unitaires et évaluations d'appels d'outils par modèle
+  docs/             guides en français et en anglais
+  assets/           images du README
+  AGENTS.md  README.md  LICENSE  CONTRIBUTING.md  SECURITY.md  CODE_OF_CONDUCT.md
+```
+
+## Sécurité
+
+> [!WARNING]
+> Un agent qui lance des commandes sur votre machine reste un outil puissant. Lisez les demandes de confirmation avant d'accepter, surtout pour les niveaux 2 et 3.
+
+Quelques bonnes pratiques :
+
+- Commencez en mode `strict` ou `lecture-seule` sur un projet que vous ne connaissez pas.
+- N'autorisez pour la session que des actions de lecture, et des commandes précises plutôt que larges.
+- Pour du code non fiable, lancez LuluCode dans un conteneur ou une machine virtuelle.
+- Ne placez jamais une clé dans un fichier du projet : utilisez une variable d'environnement.
+
+Pour signaler une faille, ne créez pas d'issue publique. Suivez les instructions de [SECURITY.md](SECURITY.md).
+
+## Feuille de route
+
+**Version 0.1**
+
+- [ ] Boucle d'agent et contrat d'événements
+- [ ] Client au format OpenAI avec profils local et distant
+- [ ] Outils de fichiers, de recherche de code et de commandes
+- [ ] Permissions complètes : niveaux, modes, autorisation de session, journal
+- [ ] Façade terminal
+- [ ] Façade web
+- [ ] Outil DocScan, recherche en ligne et lecture de pages web
+- [ ] Validation des appels d'outils, correction guidée, mode de secours
+- [ ] Résultats des tests sur plusieurs modèles publiés
+- [ ] Documentation en français et en anglais, paquet PyPI
+
+**Ensuite**
+
+- [ ] Prise en charge de MCP pour brancher des outils externes
+- [ ] Sous-agents pour les tâches longues
+- [ ] Système d'extensions
+- [ ] Intégration à un éditeur de code
+
+## Contribuer
+
+Les contributions sont les bienvenues, que ce soit du code, de la documentation, des tests sur de nouveaux modèles ou des retours d'usage. Regardez les issues marquées `bon premier ticket`.
+
+```bash
+git clone https://github.com/VOTRE-COMPTE/lulucode.git
+cd lulucode
+
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+
+# Interface web
+cd web && npm install && npm run dev
+```
+
+1. Créez une branche : `git checkout -b feature/ma-fonctionnalite`
+2. Ajoutez des tests pour ce que vous modifiez.
+3. Committez avec la convention ci-dessous.
+4. Ouvrez une Pull Request en décrivant le problème résolu.
+
+| Préfixe | Usage |
+| --- | --- |
+| `feat:` | Nouvelle fonctionnalité |
+| `fix:` | Correction de bug |
+| `docs:` | Documentation uniquement |
+| `refactor:` | Réécriture sans changement de comportement |
+| `test:` | Ajout ou modification de tests |
+| `chore:` | Maintenance, dépendances, configuration |
+
+Tout changement qui touche aux permissions doit s'accompagner de tests automatiques : aucune action de niveau 3 ne doit pouvoir s'exécuter sans confirmation. Merci de lire aussi le [code de conduite](CODE_OF_CONDUCT.md) et le guide [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Dans le même paysage
+
+LuluCode n'est pas le premier agent de code open source, et il ne cherche pas à remplacer les autres. [OpenCode](https://opencode.ai), [Aider](https://aider.chat), [Goose](https://block.github.io/goose/) et [Cline](https://cline.bot) sont d'excellents projets, qui ont inspiré plusieurs idées ici. Ce qui distingue LuluCode : la lecture de documents par DocScan, l'attention portée aux petits modèles locaux, et le même moteur derrière le terminal et le web.
+
+## Licence
+
+LuluCode est distribué sous licence [Apache 2.0](LICENSE).
+
+Copyright 2026 Ludel Topanou et les contributeurs de LuluCode.
+
+<br>
+
+<div align="center">
+
+Si LuluCode vous est utile, une étoile sur GitHub aide le projet à être découvert.
+
+</div>

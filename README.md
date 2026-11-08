@@ -32,7 +32,11 @@ Ollama en local ou service distant : il suffit de changer l'adresse.
 <br>
 
 > [!NOTE]
-> LuluCode est en cours de développement, la version 0.1 est en préparation. Les commandes et les options décrites ici sont l'interface visée pour cette version, elles peuvent encore bouger. Voir la [feuille de route](#feuille-de-route).
+> LuluCode est au stade **0.1.0 (alpha)**. Le cœur est implémenté et testé :
+> boucle d'agent, client au format OpenAI avec profils, cinq tools, moteur de
+> permissions (niveaux 0-3, modes, mémorisation de session), façade terminal.
+> La façade web, DocScan et la recherche en ligne sont encore à construire :
+> voir la [feuille de route](#feuille-de-route). Les interfaces peuvent bouger.
 
 ## Pourquoi LuluCode
 
@@ -40,7 +44,7 @@ Les agents de code les plus connus sont pensés pour de gros modèles hébergés
 
 - **Vous gardez la main.** Chaque action de l'agent passe par un système de permissions. Rien n'est écrit, lancé ou supprimé sans qu'une règle ou vous-même l'ayez autorisé.
 - **Il fonctionne aussi avec de petits modèles locaux.** Les appels d'outils sont validés avant exécution, les erreurs sont renvoyées au modèle pour qu'il se corrige, et un mode de secours existe pour les modèles qui ne gèrent pas les outils.
-- **Il lit vos documents.** Grâce à [DocScan](https://github.com/VOTRE-COMPTE/docscan), un PDF, un fichier Word ou Excel, un scan ou une photo de téléphone arrive sous forme de Markdown compact, ce qui économise des tokens.
+- **Il lit vos documents.** Grâce à DocScan, un PDF, un fichier Word ou Excel, un scan ou une photo de téléphone arrive sous forme de Markdown compact, ce qui économise des tokens.
 - **Un seul moteur.** Le terminal et l'interface web utilisent exactement le même cœur, donc le même comportement et les mêmes permissions.
 
 ## Fonctionnalités
@@ -89,6 +93,15 @@ Les agents de code les plus connus sont pensés pour de gros modèles hébergés
 ```bash
 pipx install lulucode
 ```
+
+> [!TIP]
+> Pendant la phase alpha, sans paquet PyPI :
+> ```bash
+> git clone https://github.com/LostedGhost/LuluCode.git
+> cd LuluCode
+> python -m venv .venv && .venv/Scripts/activate || source .venv/bin/activate
+> pip install -e ".[terminal]"
+> ```
 
 **Premier lancement avec un modèle local**
 
@@ -291,7 +304,7 @@ Plusieurs modèles sont comparés sur un même jeu d'environ 20 tâches types : 
 
 ## Lire des documents avec DocScan
 
-Quand [DocScan](https://github.com/VOTRE-COMPTE/docscan) est installé, LuluCode l'utilise automatiquement pour tout fichier qui n'est pas du texte brut. Le document est converti en Markdown compact avant d'être lu, ce qui réduit fortement le nombre de tokens envoyés au modèle.
+Quand DocScan est installé, LuluCode l'utilise automatiquement pour tout fichier qui n'est pas du texte brut. Le document est converti en Markdown compact avant d'être lu, ce qui réduit fortement le nombre de tokens envoyés au modèle.
 
 ```bash
 pipx install docscan
@@ -304,17 +317,20 @@ DocScan est un outil optionnel, appelé par sa ligne de commande. Sans lui, Lulu
 ```
 lulucode/
   src/lulucode/
-    core/           boucle d'agent, contexte, résumé des longues conversations
+    core/           boucle d'agent, contrat d'événements
     model/          client au format OpenAI, profils, validation des appels d'outils
-    tools/          fichiers, commandes, recherche de code, web, docscan
-    permissions/    niveaux de risque, règles, décisions mémorisées, journal
+    tools/          fichiers, commandes, recherche de code (web et docscan à venir)
+    permissions/    niveaux de risque, règles, décisions mémorisées
     cli/            façade terminal
-    server/         façade web (API et flux d'événements)
-  web/              interface React
-  tests/            tests unitaires et évaluations d'appels d'outils par modèle
-  docs/             guides en français et en anglais
+    server/         façade web (à venir : API et flux d'événements)
+  web/              interface React (à venir)
+  tests/            tests unitaires, modèle fictif, évaluations par modèle (à venir)
+  docs/             guides en français et en anglais (à venir)
   assets/           images du README
-  AGENTS.md  README.md  LICENSE  CONTRIBUTING.md  SECURITY.md  CODE_OF_CONDUCT.md
+  studio/           direction artistique de la vitrine
+  PROJECT_MAP.md    carte du projet pour reprendre le code vite
+  AGENTS.md         règles pour les agents IA qui travaillent sur le dépôt
+  pyproject.toml
 ```
 
 ## Sécurité
@@ -333,16 +349,22 @@ Pour signaler une faille, ne créez pas d'issue publique. Suivez les instruction
 
 ## Feuille de route
 
-**Version 0.1**
+**Version 0.1 — fondations (faites)**
 
-- [ ] Boucle d'agent et contrat d'événements
-- [ ] Client au format OpenAI avec profils local et distant
-- [ ] Outils de fichiers, de recherche de code et de commandes
-- [ ] Permissions complètes : niveaux, modes, autorisation de session, journal
-- [ ] Façade terminal
+- [x] Boucle d'agent et contrat d'événements
+- [x] Client au format OpenAI avec profils local et distant
+- [x] Outils de fichiers, de recherche de code et de commandes
+- [x] Permissions : niveaux, modes, autorisation de session (le journal d'actions est à venir)
+- [x] Façade terminal
+- [x] Tests automatiques sur les invariants de permissions (niveau 3 jamais exécuté sans confirmation)
+
+**Version 0.1 — suite**
+
 - [ ] Façade web
+- [ ] Résumé automatique des longues conversations
 - [ ] Outil DocScan, recherche en ligne et lecture de pages web
-- [ ] Validation des appels d'outils, correction guidée, mode de secours
+- [ ] Validation des appels d'outils : correction guidée, mode de secours pour modèles sans outils natifs
+- [ ] Journal des actions persistant
 - [ ] Résultats des tests sur plusieurs modèles publiés
 - [ ] Documentation en français et en anglais, paquet PyPI
 
@@ -358,8 +380,8 @@ Pour signaler une faille, ne créez pas d'issue publique. Suivez les instruction
 Les contributions sont les bienvenues, que ce soit du code, de la documentation, des tests sur de nouveaux modèles ou des retours d'usage. Regardez les issues marquées `bon premier ticket`.
 
 ```bash
-git clone https://github.com/VOTRE-COMPTE/lulucode.git
-cd lulucode
+git clone https://github.com/LostedGhost/LuluCode.git
+cd LuluCode
 
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
