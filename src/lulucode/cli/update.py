@@ -216,6 +216,13 @@ def mets_a_jour(version: str | None = None, installation: Installation | None = 
       avec `version`, installe le tag demandé via le remote git, sans
       modifier le dépôt local.
     - mode PyPI : pipx upgrade ; avec `version`, inst lulucode==version.
+
+    Cas particulier Windows : si lulucode tourne depuis le venv pipx
+    qu'il faut remplacer, la réinstallation est différée — Windows
+    verrouille lulucode.exe pendant qu'il s'exécute. On écrit un petit
+    script batch qui attend la fin du processus puis relance pipx, et
+    on le délègue au planificateur via `start /b` ; le message final
+    invite l'utilisateur à patienter quelques secondes.
     """
     journal: list[str] = []
     installation = installation or detecte_installation()
@@ -242,15 +249,92 @@ def mets_a_jour(version: str | None = None, installation: Installation | None = 
         else:
             code = git_pull(repo, journal)
             if code == 0:
-                code = _lance(commande_pipx() + ["install", "--force", repo], journal)
+                code = _reinstalle_si_possible(
+                    commande_pipx() + ["install", "--force", repo], journal
+                )
     else:
         cmds = commande_pipx()
         if version:
             cmds += ["install", "--force", f"lulucode=={version}"]
         else:
             cmds += ["upgrade", "lulucode"]
-        code = _lance(cmds, journal)
+        code = _reinstalle_si_possible(cmds, journal)
 
     if code == 0:
         journal.append(f"lulucode est à jour — version {version_actuelle()}")
     return code, journal
+
+
+def _dans_venv_pipx_actif() -> bool:
+    """True si lulucode.exe lui-même tourne depuis le venv pipx."""
+    executable = Path(sys.argv[0]).resolve() if sys.argv and sys.argv[0] else Path(sys.executable)
+    return any(
+        p.name == "venvs" and p.parent.name == "pipx" for p in executable.parents
+    )
+
+
+def _reinstalle_si_possible(cmd: list[str], journal: list[str]) -> int:
+    """Réinstalle via pipx, en différant si l'exe courant verrouille le venv.
+
+    Windows refuse de remplacer lulucode.exe pendant qu'il s'exécute deux
+    fois sur deux : la sortie de lulucode update laisse quelques secondes,
+    puis un script temporaire relance pipx.
+    """
+    if os.name != "nt" or not _dans_venv_pipx_actif():
+        return _lance(cmd, journal)
+
+    # Différé : le batch attend que lulucode update se termine.
+    import tempfile
+
+    ligne_cmd = subprocess.list2cmdline(cmd)
+    python_sys = _python_systeme_pour_pipx()
+    script = (
+        "@echo off\r\n"
+        "timeout /t 2 /nobreak >nul\r\n"
+        f"{subprocess.list2cmdline([python_sys])} -m pipx install --force "
+        f"{_spec_depuis_ligne(ligne_cmd)}\r\n"
+    )
+    try:
+        handle = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".bat", delete=False, prefix="lulucode-update-"
+        )
+        handle.write(script)
+        handle.close()
+    except OSError as e:
+        journal.append(f"impossible d'écrire le script de mise à jour : {e}")
+        return 1
+    try:
+        subprocess.Popen(
+            ["cmd", "/c", handle.name],
+            creationflags=getattr(subprocess, "DETACHED_PROCESS", 0),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except OSError as e:
+        journal.append(f"lancement du script différé impossible : {e}")
+        return 1
+    journal.append(
+        f"réinstallation lancée en arrière-plan ({handle.name}) ; "
+        "lulucode sera mis à jour dans quelques secondes après cette commande"
+    )
+    return 0
+
+
+def _python_systeme_pour_pipx() -> str:
+    """Python hors venv pipx pour relancer pipx dans le script différé."""
+    for candidat in ("py", "python3", "python"):
+        trouve = shutil.which(candidat)
+        if trouve and not any(
+            p.name == "venvs" and p.parent.name == "pipx"
+            for p in Path(trouve).resolve().parents
+        ):
+            return trouve
+    return sys.executable
+
+
+def _spec_depuis_ligne(ligne: str) -> str:
+    """Extrait le spec d'installation après `pipx install --force `."""
+    marqueur = "--force"
+    pos = ligne.find(marqueur)
+    if pos == -1:
+        return ""
+    return ligne[pos + len(marqueur):].strip()
