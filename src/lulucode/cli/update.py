@@ -78,11 +78,32 @@ def version_actuelle(nom_paquet: str = "lulucode") -> str:
 
 
 def commande_pipx() -> list[str]:
-    """Commande pipx disponible : binaire sur le PATH, sinon module python."""
+    """Commande pipx disponible : binaire sur le PATH, sinon module python.
+
+    Exception : si on tourne depuis le venv pipx de lulucode (lancement
+    par l'exe), `sys.executable` pointe dans un environnement que pipx
+    doit remplacer — verrouillé sous Windows pendant l'exécution. On
+    cherche alors un python hors venv (launcher `py`, puis `python` du
+    PATH), pour que la réinstallation puisse désinstaller proprement.
+    """
     pipx = shutil.which("pipx")
     if pipx:
         return [pipx]
-    python = shutil.which("python") or sys.executable
+    marque = ("pipx", "venvs")
+    python = sys.executable
+    parents = Path(python).resolve().parents
+    dans_venv_pipx = any(
+        p.name == "venvs" and p.parent.name == "pipx" for p in parents
+    )
+    if dans_venv_pipx:
+        for candidat in ("py", "python3", "python"):
+            trouve = shutil.which(candidat)
+            if trouve and not any(
+                p.name == "venvs" and p.parent.name == "pipx"
+                for p in Path(trouve).resolve().parents
+            ):
+                python = trouve
+                break
     return [python, "-m", "pipx"]
 
 
