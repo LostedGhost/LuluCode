@@ -267,11 +267,24 @@ def mets_a_jour(version: str | None = None, installation: Installation | None = 
 
 
 def _dans_venv_pipx_actif() -> bool:
-    """True si lulucode.exe lui-même tourne depuis le venv pipx."""
-    executable = Path(sys.argv[0]).resolve() if sys.argv and sys.argv[0] else Path(sys.executable)
-    return any(
-        p.name == "venvs" and p.parent.name == "pipx" for p in executable.parents
-    )
+    """True si lulucode s'exécute depuis pipx (venv interne OU shim de lancement).
+
+    Le shim `~/.local/bin/lulucode.exe` est aussi remplacé par pipx lors
+    d'une réinstallation : sous Windows, il est verrouillé pendant que le
+    processus l'utilise. Les deux cas imposent la réinstallation différée.
+    """
+    chemins = [sys.argv[0] if sys.argv and sys.argv[0] else "", sys.executable]
+    for brut in chemins:
+        if not brut:
+            continue
+        executable = Path(brut).resolve()
+        if any(
+            p.name == "venvs" and p.parent.name == "pipx" for p in executable.parents
+        ):
+            return True
+        if executable.name.lower() == "lulucode.exe" and ".local" in executable.parts:
+            return True
+    return False
 
 
 def _reinstalle_si_possible(cmd: list[str], journal: list[str]) -> int:
