@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -92,6 +93,17 @@ class _EmetteurWeb:
 app = FastAPI(title="LuluCode")
 
 session_active: SessionWeb | None = None
+
+# Bundle React (web/dist/) servi en statique s'il existe.
+from fastapi.staticfiles import StaticFiles
+
+_REPERTOIRE_WEB = Path(__file__).parent / "web_dist"
+if _REPERTOIRE_WEB.is_dir():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(_REPERTOIRE_WEB / "assets")),
+        name="assets",
+    )
 
 
 def configure(agent: Any, port: int = 8341, version: str = "", profil: str = "",
@@ -194,11 +206,18 @@ def _verifie() -> None:
 
 # --- pages -------------------------------------------------------------------
 
-from lulucode.server.page import PAGE as _PAGE
+# Interface React : bundle construit par `npm run build` dans web/dist/
+# puis copié en tant que `web_dist/` du paquet. Retombe sur la page
+# légère (page.py) si le bundle n'est pas embarqué.
+_REPERTOIRE_WEB = Path(__file__).parent / "web_dist"
 
 
 def _page_session() -> str:
-    return _PAGE
+    index = _REPERTOIRE_WEB / "index.html"
+    if index.is_file():
+        return index.read_text(encoding="utf-8")
+    from lulucode.server.page import PAGE
+    return PAGE
 
 
 def _page_acces_refuse() -> str:

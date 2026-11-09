@@ -50,6 +50,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "lulucode.core" = ["systeme/*.md"]
+"lulucode.server" = ["web_dist/**/*"]
 
 [tool.ruff]
 line-length = 100

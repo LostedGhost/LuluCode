@@ -1,0 +1,78 @@
+/* ==========================================================================
+   Design system LuluCode Web — tokens, deux thèmes clair et sombre.
+   Mobile-first ; thèmes : [data-theme="sombre"], [data-theme="clair"],
+   sans attribut = préférence système (prefers-color-scheme).
+   ========================================================================== */
+
+/* --- sombre (défaut du projet, préférence système) ----------------------- */
+:root {
+  color-scheme: dark;
+  --fond: #0d1117;
+  --panneau: #161b22;
+  --panneau-2: #1b2230;
+  --bordure: #30363d;
+  --bordure-forte: #484f58;
+  --texte: #e6edf3;
+  --gris: #8b949e;
+  --cyan: #22d3ee;
+  --violet: #a78bfa;
+  --degrade: linear-gradient(90deg, #22d3ee, #a78bfa);
+  --bulle-fond: linear-gradient(135deg, rgba(34,211,238,.16), rgba(167,139,250,.16));
+  --bulle-bord: rgba(34, 211, 238, 0.45);
+  --vert: #3fb950; --bleu: #58a6ff; --jaune: #d29922; --rouge: #f85149;
+  --code-fond: #0b1017;
+  --zebre: rgba(255, 255, 255, 0.02);
+  --entete-tableau: rgba(34, 211, 238, 0.10);
+  --halo-cyan: 0 0 40px rgba(34, 211, 238, 0.22);
+  --halo-violet: 0 0 70px rgba(167, 139, 250, 0.18);
+  --ombre-2: 0 6px 24px rgba(0, 0, 0, 0.35);
+
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pilule: 999px;
+  --e-1: 4px; --e-2: 8px; --e-3: 12px; --e-4: 16px;
+  --e-5: 20px; --e-6: 24px; --e-8: 32px;
+  --police: 'Segoe UI', Roboto, 'Helvetica Neue', system-ui, sans-serif;
+  --mono: 'Cascadia Code', Consolas, 'SF Mono', monospace;
+  --duree: 160ms;
+  --easing: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- clair --------------------------------------------------------------- */
+:root[data-theme='clair'] {
+  color-scheme: light;
+  --fond: #f7f9fc;
+  --panneau: #ffffff;
+  --panneau-2: #ffffff;
+  --bordure: #dfe4ea;
+  --bordure-forte: #c7cdd6;
+  --texte: #1f2733;
+  --gris: #5b6672;
+  --bulle-fond: linear-gradient(135deg, rgba(34,211,238,.14), rgba(167,139,250,.14));
+  --code-fond: #eef1f6;
+  --halo-cyan: 0 0 34px rgba(34, 211, 238, 0.20);
+  --halo-violet: 0 0 60px rgba(167, 139, 250, 0.16);
+  --ombre-2: 0 6px 24px rgba(30, 40, 60, 0.10);
+}
+
+/* mode auto : suit le système tant que l'utilisateur n'a pas choisi */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --fond: #f7f9fc;
+    --panneau: #ffffff;
+    --panneau-2: #f2f5f9;
+    --bordure: #dfe4ea;
+    --texte: #1f2733;
+    --gris: #5b6672;
+    --cyan: #0891b2;   /* cyan assombri pour le contraste sur fond clair */
+    --violet: #7c3aed; /* violet assombri */
+    --bulle-fond: linear-gradient(135deg, rgba(8,145,178,.10), rgba(124,58,237,.10));
+    --code-fond: #eef1f6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
