@@ -44,20 +44,26 @@ def config_init() -> None:
 
 
 @app.command()
-@click.option("--profil", "-p", default=None, help="Profil de modèle pour cette session")
+@click.option("--profil", "-p", default=None, help="(ancien nom) profil de modèle pour cette session")
 @click.option("--mode", "-m", default="normal", help="Mode de permission : normal, strict, lecture-seule")
 @click.option("--tache", "-t", default=None, help="Exécute cette tâche unique puis quitte")
-def run(profil: str | None, mode: str, tache: str | None) -> None:
-    """Démarre une session dans le terminal, dans le dossier courant."""
+@click.argument("profil_positionne", required=False, default=None)
+def run(profil: str | None, mode: str, tache: str | None, profil_positionne: str | None) -> None:
+    """Démarre une session dans le terminal, dans le dossier courant.
+
+    Le nom de profil se passe directement : `lulucode run distant`.
+    Sans argument, c'est le profil par défaut de la configuration.
+    """
     from lulucode.cli.render import cree_rendu
     from lulucode.model.client import ClientModele, charge_config, profil_actif
     from lulucode.permissions.moteur import Mode
 
     rendu = cree_rendu()
     seule = Path.cwd()
+    nom_profil = profil_positionne or profil
     try:
         config = charge_config()
-        p = profil_actif(config, profil)
+        p = profil_actif(config, nom_profil)
     except (FileNotFoundError, ValueError) as e:
         rendu.erreur(str(e))
         sys.exit(1)

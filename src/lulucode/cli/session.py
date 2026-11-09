@@ -13,12 +13,12 @@ from __future__ import annotations
 from typing import Any
 
 LOGO = """\
-██╗      ██╗    ██╗██╗      ██╗    ██╗ ██████╗  ██████╗  ██████╗  ███████╗
-██║      ██║    ██║██║      ██║    ██║██╔════╝ ██╔═══██╗ ██╔══██╗ ██╔════╝
-██║      ██║    ██║██║      ██║    ██║██║      ██║   ██║ ██████╔╝ █████╗
-██║      ██║    ██║██║      ██║    ██║██║      ██║   ██║ ██╔══██╗ ██╔══╝
-███████╗ ╚██████╔╝███████╗ ╚██████╔╝ ╚██████╗ ╚██████╔╝ ██║  ██║ ███████╗
-╚══════╝  ╚═════╝ ╚══════╝  ╚═════╝   ╚═════╝  ╚═════╝  ╚═╝  ╚═╝ ╚══════╝
+██╗      ██╗   ██╗ ██╗      ██╗   ██╗  ██████╗  ██████╗   ██████╗  ███████╗
+██║      ██║   ██║ ██║      ██║   ██║ ██╔════╝ ██╔═══██╗ ██╔══██╗ ██╔════╝
+██║      ██║   ██║ ██║      ██║   ██║ ██║      ██║   ██║ ██║  ██║ █████╗
+██║      ██║   ██║ ██║      ██║   ██║ ██║      ██║   ██║ ██║  ██║ ██╔══╝
+███████╗ ╚██████╔╝ ███████╗ ╚██████╔╝ ╚██████╗ ╚██████╔╝ ██████╔╝ ███████╗
+╚══════╝  ╚═════╝ ╚══════╝  ╚═════╝  ╚═════╝  ╚═════╝  ╚═════╝  ╚══════╝
 """
 
 CYAN = "#22d3ee"
@@ -27,7 +27,14 @@ GRIS = "#8b949e"
 
 
 class Session:
-    """Boucle interactive : bannière, saisie encadrée, affichage direct."""
+    """Boucle interactive : plein écran réel, bannière, saisie encadrée.
+
+    Plein écran réel : le terminal bascule sur son buffer alternatif
+    (séquence OSC 1049) — l'historique du shell disparaît totalement
+    pendant la session (impossible de remonter dessus au scroll) et
+    revient intact à la sortie. C'est le mécanisme de Claude Code et
+    des éditeurs plein terminal (vim, less).
+    """
 
     def __init__(self, agent: Any, rendu: Any, *, version: str, profil: str, mode: str) -> None:
         self.agent = agent
@@ -36,6 +43,26 @@ class Session:
         self.profil = profil
         self.mode = mode
         self.console = rendu.console
+
+    # --- plein écran ---------------------------------------------------------
+
+    def entre_plein_ecran(self) -> None:
+        """Bascule le terminal sur le buffer alternatif (écran vierge)."""
+        import sys as _sys
+
+        if not self.console.is_terminal:
+            return
+        _sys.stdout.write("\x1b[?1049h\x1b[H")  # buffer alt + curseur en haut
+        _sys.stdout.flush()
+
+    def sort_plein_ecran(self) -> None:
+        """Revient au buffer principal : l'historique du shell réapparaît."""
+        import sys as _sys
+
+        if not self.console.is_terminal:
+            return
+        _sys.stdout.write("\x1b[?1049l")
+        _sys.stdout.flush()
 
     # --- bannière -----------------------------------------------------------
 
@@ -94,27 +121,31 @@ class Session:
     async def boucle(self) -> None:
         from lulucode.cli.main import veut_sortir
 
-        self.banniere()
-        while True:
-            self.invite()
-            try:
-                requis = self.saisie_texte()
-            finally:
-                self.fin_invite()
-            if not requis:
-                continue
-            if veut_sortir(requis):
-                self.rendu.au_revoir()
-                return
-            if requis.strip().lower() == "/aide":
-                self.rendu.texte_agent(
-                    "**Commandes**\n\n"
-                    "- `/aide` — cette liste\n"
-                    "- `exit` ou `/quitter` — sortir\n"
-                    "- ↑/↓ — historique de saisie"
-                )
-                continue
-            await self.execute(requis)
+        self.entre_plein_ecran()  # buffer alternatif : scrollback masqué
+        try:
+            self.banniere()
+            while True:
+                self.invite()
+                try:
+                    requis = self.saisie_texte()
+                finally:
+                    self.fin_invite()
+                if not requis:
+                    continue
+                if veut_sortir(requis):
+                    self.rendu.au_revoir()
+                    return
+                if requis.strip().lower() == "/aide":
+                    self.rendu.texte_agent(
+                        "**Commandes**\n\n"
+                        "- `/aide` — cette liste\n"
+                        "- `exit` ou `/quitter` — sortir\n"
+                        "- ↑/↓ — historique de saisie"
+                    )
+                    continue
+                await self.execute(requis)
+        finally:
+            self.sort_plein_ecran()  # le shell réapparaît tel quel
 
     # --- saisie -------------------------------------------------------------
 
