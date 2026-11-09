@@ -11,6 +11,10 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LuluCode</title>
+<!-- Markdown -> HTML : marked (parseur standard) + DOMPurify (anti-XSS).
+     CDN versions figées, conformité au contrat CDN du projet. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <style>
   :root {
     --fond:#0d1117; --panneau:#161b22; --panneau2:#1b2230;
@@ -110,12 +114,44 @@ PAGE = """<!doctype html>
   .agent .qui { display:block; font-size:11px; font-weight:700;
                 letter-spacing:.06em; text-transform:uppercase;
                 color:var(--violet); margin-bottom:6px; }
-  .agent pre { background:var(--panneau); border:1px solid var(--bordure);
-               border-radius:10px; padding:12px; overflow-x:auto;
-               font:13px Consolas,monospace; }
-  .agent code.enligne { background:var(--panneau); border-radius:5px;
-                        padding:1px 6px; font-family:Consolas,monospace;
-                        font-size:13px; color:var(--cyan); }
+  /* --- contenu Markdown rendu par marked --- */
+  .agent > :first-child { margin-top:0; }
+  .agent h1, .agent h2, .agent h3, .agent h4 {
+    margin:18px 0 8px; color:var(--texte); line-height:1.3; }
+  .agent h1 { font-size:20px; padding-bottom:6px;
+              border-bottom:1px solid var(--bordure); }
+  .agent h2 { font-size:17px; color:var(--cyan); }
+  .agent h3 { font-size:15px; color:var(--violet); }
+  .agent h4 { font-size:14px; color:var(--gris); }
+  .agent p { margin:0 0 10px; }
+  .agent ul, .agent ol { margin:0 0 10px; padding-left:22px; }
+  .agent li { margin-bottom:4px; }
+  .agent li::marker { color:var(--cyan); }
+  .agent blockquote { margin:10px 0; padding:6px 14px;
+                      border-left:3px solid var(--violet);
+                      background:rgba(167,139,250,.06);
+                      border-radius:0 8px 8px 0; color:var(--texte); }
+  .agent pre { background:#0b1017; border:1px solid var(--bordure);
+               border-radius:10px; padding:14px 16px; overflow-x:auto;
+               font:13px/1.55 Consolas,'Cascadia Code',monospace;
+               margin:0 0 12px; }
+  .agent pre code { background:transparent; padding:0; color:var(--texte); }
+  .agent code { background:var(--panneau); border-radius:5px;
+                padding:1px 6px; font-family:Consolas,'Cascadia Code',monospace;
+                font-size:13px; color:var(--cyan); }
+  .agent pre code { color:inherit; background:transparent; padding:0;
+                    border-radius:0; }
+  /* tableaux GFM : bordures complètes, en-tête cyan */
+  .agent table { border-collapse:collapse; margin:10px 0 14px;
+                 width:auto; max-width:100%; display:block; overflow-x:auto;
+                 font-size:14px; }
+  .agent th { background:rgba(34,211,238,.10); color:var(--cyan);
+              font-weight:700; text-align:left; }
+  .agent th, .agent td { border:1px solid var(--bordure);
+                         padding:6px 12px; }
+  .agent tr:nth-child(even) td { background:rgba(255,255,255,.02); }
+  .agent hr { border:0; border-top:1px solid var(--bordure); margin:14px 0; }
+  .agent a { color:var(--cyan); }
   .chevron { color:var(--cyan); font-weight:700; margin-right:8px; }
   .outil { color:var(--gris); font-size:13.5px; margin:10px 0; }
   .pt { margin-right:8px; }
@@ -316,20 +352,15 @@ function montre_accueil_si_vide() {
   }
 }
 
-// Markdown minimal : titres, gras, code inline, blocs de code, listes
+// Rendu Markdown : la bibliothèque marked fait le parse, DOMPurify
+// garantit qu'aucun code injecté dans une réponse du modèle ne s'exécute.
 function rendu_md(t) {
-  let s = echappe(t);
-  s = s.replace(/```(\\w*)\\n([\\s\\S]*?)```/g,
-    (m, lang, code) => '<pre><code>' + code + '</code></pre>');
-  s = s.replace(/`([^`\\n]+)`/g, '<code class="enligne">$1</code>');
-  s = s.replace(/^### (.*)$/gm, '<b>$1</b>');
-  s = s.replace(/\\*\\*([^*]+)\\*\\*/g, '<b>$1</b>');
-  s = s.replace(/^[-*] (.*)$/gm, '• $1');
-  s = s.replace(/\\|(.+)\\|/g, (m) => '<code class="tbl">' + m + '</code>');
-  return s;
+  const brut = marked.parse(t || "", { breaks: true, gfm: true });
+  return DOMPurify.sanitize(brut, {
+    FORBID_TAGS: ['style', 'form', 'input', 'iframe'],
+  });
 }
 
-// --- flux SSE ---
 const source = new EventSource('/evenements');
 source.onmessage = (e) => {
   let ev; try { ev = JSON.parse(e.data); } catch { return; }
