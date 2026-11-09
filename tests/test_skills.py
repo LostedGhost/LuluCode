@@ -36,11 +36,24 @@ class TestDecouverte:
         assert skill.chemin.endswith("SKILL.md")
 
     def test_projet_masque_utilisateur(self, tmp_path, monkeypatch):
-        _cree_skill(tmp_path / ".lulucode" / "skills", "commun", "version projet")
-        _cree_skill(Path.home() / "__test_deco_skills__", "commun", "version utilisateur")
-        monkeypatch.setenv("HOME", str(tmp_path))  # ~/.lulucode sous tmp_path
-        skills = decouvre_skills(tmp_path)
-        assert all(s.description == "version projet" for s in skills if s.name == "commun")
+        """Un skill du projet prend le pas sur un homonyme utilisateur."""
+        from lulucode.core import skills as module_skills
+
+        projet = tmp_path / "projet"
+        utilisateur = tmp_path / "utilisateur"
+        _cree_skill(projet / ".lulucode" / "skills", "commun", "version projet")
+        _cree_skill(utilisateur / ".lulucode" / "skills", "commun", "version utilisateur")
+
+        # On simule la racine utilisateur (~) via un dossier de test.
+        original_home = module_skills.Path.home
+
+        def home_simule():
+            return utilisateur
+
+        monkeypatch.setattr(module_skills.Path, "home", staticmethod(home_simule))
+        skills = decouvre_skills(projet)
+        version = [s.description for s in skills if s.name == "commun"]
+        assert version == ["version projet"]
 
     def test_skill_invalide_ignore(self, tmp_path):
         dossier = tmp_path / ".lulucode" / "skills" / "casse"

@@ -130,8 +130,19 @@ _MOTS_SORTIE = frozenset({"exit", "quit", "quitter", "/exit", "/quit", "/quitter
 
 
 def veut_sortir(texte: str) -> bool:
-    """True si la saisie demande la fin de la session."""
-    return texte.strip().lower() in _MOTS_SORTIE
+    """True si la saisie demande la fin de la session.
+
+    « exit » seul ou suivi d'un message (« exit merci ») coupe l'agent ;
+    un mot distinct (« exit maintenant » reste une action ?) non :
+    « exit » suivi d'espace est toujours une sortie, le reste du texte
+    étant le message d'adieu. En revanche « exite » ou « sortir » ne
+    coupent pas.
+    """
+    prop = texte.strip().lower()
+    if prop in _MOTS_SORTIE:
+        return True
+    premier, _, reste = prop.partition(" ")
+    return premier in _MOTS_SORTIE and bool(reste.strip())
 
 
 async def _boucle_session(agent: object, rendu: object) -> None:

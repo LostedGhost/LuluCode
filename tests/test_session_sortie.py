@@ -19,15 +19,21 @@ class TestSortieSession:
         assert veut_sortir(saisie) is True
 
     @pytest.mark.parametrize("saisie", [
-        "", "   ", "exite", "exit2", "exit; rm -rf /", "sortir maintenant",
-        "lire le fichier", "/aide",
+        "", "   ", "exite", "exit2", "sortir maintenant", "lire le fichier",
+        "/aide",
     ])
     def test_formes_refusees(self, saisie):
         assert veut_sortir(saisie) is False
 
-    def test_exit_ne_lance_pas_agent(self):
-        """Le seul mot « exit » suivi d'autre chose n'est pas une sortie."""
-        assert veut_sortir("exit maintenant") is False
+    def test_exit_le_mot_devient_message(self):
+        """« exit merci beaucoup » = sortie ; le reste est l'adieu.
+
+        Un mot de sortie suivi d'espace reste une sortie, quel que soit
+        le message — c'est lui qui porte l'adieu utilisateur.
+        """
+        assert veut_sortir("exit merci beaucoup") is True
+        assert veut_sortir("exit maintenant") is True
+        assert veut_sortir("/quitter à bientôt") is True
 
 
 class TestRendu:
