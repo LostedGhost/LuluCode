@@ -89,15 +89,16 @@ class Session:
 
     # --- invite -------------------------------------------------------------
 
+    CHEVRON = "> "
+
     def invite(self) -> None:
-        """L'invite entre deux règles cyan, avant chaque saisie."""
+        """Ligne ouverte sous la règle du haut ; le chevron est géré par
+        la session de saisie elle-même (sinon prompt_toolkit re-dessine
+        la ligne sans lui et le chevron saute).
+        """
         from rich.rule import Rule
-        from rich.text import Text
 
         self.console.print(Rule(style=CYAN))
-        self.console.print(Text("> ", style=f"bold {CYAN}"), end="")
-        # La règle du bas est tracée après la saisie (dans la boucle).
-        self._saisie_en_cours = True
 
     def fin_invite(self) -> None:
         """Règle du bas après la lecture de la saisie."""
@@ -155,13 +156,17 @@ class Session:
         Dans une boucle asyncio en cours, `PromptSession.prompt()`
         synchrone retourne une coroutine non attendue : on utilise
         `prompt_async()` qui gère historique et édition au-dessus de
-        l'event loop sans la bloquer.
+        l'event loop sans la bloquer. Le chevron est passé comme
+        message d'invite à prompt_toolkit : c'est lui le propriétaire
+        de la ligne pendant la saisie, le curseur vient naturellement
+        APRÈS le chevron.
         """
         try:
             from prompt_toolkit import PromptSession
+            from prompt_toolkit.formatted_text import HTML
             from prompt_toolkit.history import FileHistory
         except ImportError:
-            return self._saisie_click()
+            return await self._saisie_click()
 
         try:
             if not hasattr(self, "_pt_session"):
@@ -173,7 +178,8 @@ class Session:
                     history=FileHistory(str(dossier / "historique")),
                     enable_history_search=True,
                 )
-            return (await self._pt_session.prompt_async("")).rstrip()
+            invite_html = HTML(f'<style fg="{CYAN}" bold>{self.CHEVRON}</style>')
+            return (await self._pt_session.prompt_async(invite_html)).rstrip()
         except (KeyboardInterrupt, EOFError):
             raise  # sortie demandée : la boucle la traite
         except Exception:
@@ -185,10 +191,13 @@ class Session:
         import asyncio
         import click
 
+        chevron = click.style("> ", fg="cyan", bold=True)
+
         try:
             return await asyncio.get_running_loop().run_in_executor(
                 None,
-                lambda: click.prompt("", default="", show_default=False).strip(),
+                lambda: click.prompt(chevron, default="", show_default=False,
+                                     prompt_suffix="").strip(),
             )
         except (KeyboardInterrupt, EOFError):
             raise
