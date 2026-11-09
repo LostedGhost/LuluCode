@@ -92,19 +92,70 @@ class Agent:
     La permission circule par `PermissionCallback` : une façade l'affiche,
     l'utilisateur répond, la réponse revient sur le même canal. Le cœur ne
     sait pas s'il est piloté par un terminal ou par un navigateur.
+
+    Le system prompt est chargé depuis `systeme/prompt.md` (embarqué dans
+    le paquet) et ses variables `{{...}}` sont substituées par l'état
+    réel de la session : zone de travail, OS, mode de permission, date.
+    Un prompt passé en argument (`systeme=`) remplace entièrement le
+    fichier ; pour l'étendre, voir `charge_prompt_systeme`.
     """
 
     client: ClientModele
     zone: Path
     moteur: Moteur = field(default_factory=Moteur)
     plafonds: Plafonds = field(default_factory=Plafonds)
-    systeme: str = (
-        "Tu es LuluCode, un agent de code. Tu travailles dans la zone de "
-        "travail fournie. Tu lis avant d'écrire, tu proposes un diff avant "
-        "de modifier, et tu respectes les décisions de permission qui te "
-        "sont renvoyées : un refus impose une autre approche. Réponds en "
-        "français."
+    systeme: str = field(default_factory=lambda: construit_prompt_systeme())
+
+
+def construit_prompt_systeme(
+    zone: Path | None = None,
+    mode: str | None = None,
+) -> str:
+    """Charge `systeme/prompt.md` et substitue ses variables.
+
+    Variables du fichier : {{ZONE_DE_TRAVAIL}}, {{OS}}, {{MODE_PERMISSION}},
+    {{DATE}}. Les variables inconnues restent telles quelles (pas de
+    surprise silencieuse) ; les variables non substituées n'existent plus
+    une fois ce module chargé.
+    """
+    from importlib.resources import files
+    import platform
+    from datetime import date
+
+    try:
+        prompt = (files("lulucode.core") / "systeme" / "prompt.md").read_text(encoding="utf-8")
+    except (FileNotFoundError, ModuleNotFoundError):
+        # Fichier absent (installation partielle) : prompt minimal de secours.
+        return (
+            "Tu es LuluCode, un agent de code. Tu travailles dans la zone de "
+            "travail fournie. Tu lis avant d'écrire, tu proposes un diff avant "
+            "de modifier, et tu respectes les décisions de permission qui te "
+            "sont renvoyées : un refus impose une autre approche. Réponds en "
+            "français."
+        )
+
+    substitutions = {
+        "{{ZONE_DE_TRAVAIL}}": str((zone or Path.cwd()).resolve()),
+        "{{OS}}": f"{platform.system()} {platform.release()} ({platform.machine()})",
+        "{{MODE_PERMISSION}}": mode or "normal",
+        "{{DATE}}": date.today().isoformat(),
+    }
+    for variable, valeur in substitutions.items():
+        prompt = prompt.replace(variable, valeur)
+
+    # Le prompt référence les modes normal/auto/bypass ; le moteur actuel
+    # n'a pas d'« auto » ni de « bypass » : on aligne la doc du prompt sur
+    # les modes réellement implémentés en ajoutant une note d'exécution.
+    note = (
+        "\n\n---\n# Note d'exécution (ajoutée par LuluCode)\n\n"
+        "Modes réellement disponibles dans cette session : `normal` "
+        "(chaque action sensible attend une validation), `strict` (tout "
+        "attend une validation, lectures comprises) et `lecture-seule` "
+        "(lecture et plan uniquement). Les modes `auto` et `bypass` cités "
+        "plus haut ne sont pas encore implémentés : applique le comportement "
+        "`normal` s'ils sont annoncés.\n"
     )
+    return prompt + note
 
     async def execute(
         self,

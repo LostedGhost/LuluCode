@@ -49,6 +49,9 @@ Issues = "https://github.com/LostedGhost/LuluCode/issues"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"lulucode.core" = ["systeme/*.md"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

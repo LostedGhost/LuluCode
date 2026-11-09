@@ -76,7 +76,7 @@ def run(profil: str | None, mode: str, tache: str | None, profil_positionne: str
 
     rendu.etat(lulucode.__version__, p.nom, mode_perm.value, str(seule))
 
-    from lulucode.core.agent import Agent, Plafonds
+    from lulucode.core.agent import Agent, Plafonds, construit_prompt_systeme
     from lulucode.permissions.moteur import Moteur
 
     general = config.get("general", {})
@@ -88,6 +88,7 @@ def run(profil: str | None, mode: str, tache: str | None, profil_positionne: str
             etapes=int(general.get("plafond_etapes", 40)),
             tokens=int(general.get("plafond_tokens", 200_000)),
         ),
+        systeme=construit_prompt_systeme(zone=seule, mode=mode_perm.value),
     )
 
     asyncio.run(_ou_mono_tache(agent, tache, rendu))
