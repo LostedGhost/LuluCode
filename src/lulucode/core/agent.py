@@ -84,29 +84,6 @@ OUTILS: dict[str, dict[str, Any]] = {
 }
 
 
-@dataclass
-class Agent:
-    """Le cœur : reçoit une tâche, appelle le modèle, exécute les outils
-    autorisés, émet des événements.
-
-    La permission circule par `PermissionCallback` : une façade l'affiche,
-    l'utilisateur répond, la réponse revient sur le même canal. Le cœur ne
-    sait pas s'il est piloté par un terminal ou par un navigateur.
-
-    Le system prompt est chargé depuis `systeme/prompt.md` (embarqué dans
-    le paquet) et ses variables `{{...}}` sont substituées par l'état
-    réel de la session : zone de travail, OS, mode de permission, date.
-    Un prompt passé en argument (`systeme=`) remplace entièrement le
-    fichier ; pour l'étendre, voir `charge_prompt_systeme`.
-    """
-
-    client: ClientModele
-    zone: Path
-    moteur: Moteur = field(default_factory=Moteur)
-    plafonds: Plafonds = field(default_factory=Plafonds)
-    systeme: str = field(default_factory=lambda: construit_prompt_systeme())
-
-
 def construit_prompt_systeme(
     zone: Path | None = None,
     mode: str | None = None,
@@ -156,6 +133,31 @@ def construit_prompt_systeme(
         "`normal` s'ils sont annoncés.\n"
     )
     return prompt + note
+
+
+
+@dataclass
+class Agent:
+    """Le cœur : reçoit une tâche, appelle le modèle, exécute les outils
+    autorisés, émet des événements.
+
+    La permission circule par `PermissionCallback` : une façade l'affiche,
+    l'utilisateur répond, la réponse revient sur le même canal. Le cœur ne
+    sait pas s'il est piloté par un terminal ou par un navigateur.
+
+    Le system prompt est chargé depuis `systeme/prompt.md` (embarqué dans
+    le paquet) et ses variables `{{...}}` sont substituées par l'état
+    réel de la session : zone de travail, OS, mode de permission, date.
+    Un prompt passé en argument (`systeme=`) remplace entièrement le
+    fichier ; pour l'étendre, voir `charge_prompt_systeme`.
+    """
+
+    client: ClientModele
+    zone: Path
+    moteur: Moteur = field(default_factory=Moteur)
+    plafonds: Plafonds = field(default_factory=Plafonds)
+    systeme: str = field(default_factory=lambda: construit_prompt_systeme())
+
 
     async def execute(
         self,
