@@ -92,18 +92,31 @@ PAGE = """<!doctype html>
 
   /* --- journal --- */
   .bloc { margin-bottom:16px; line-height:1.6; white-space:pre-wrap; }
-  .utilisateur .bulle { background:var(--panneau);
-                        border:1px solid var(--bordure);
-                        border-radius:14px 14px 14px 4px; padding:10px 14px;
-                        display:inline-block; max-width:85%; }
-  .chevron { color:var(--cyan); font-weight:700; margin-right:8px; }
-  .agent { color:var(--texte); }
+
+  /* message utilisateur : bulle décalée à droite, fond dégradé cyan-violet */
+  .utilisateur { display:flex; justify-content:flex-end; }
+  .utilisateur .bulle { background:linear-gradient(135deg, rgba(34,211,238,.16),
+                        rgba(167,139,250,.16));
+                        border:1px solid rgba(34,211,238,.45);
+                        border-radius:16px 16px 4px 16px; padding:10px 15px;
+                        max-width:80%; color:var(--texte); }
+  .utilisateur .qui { display:block; font-size:11px; font-weight:700;
+                      letter-spacing:.06em; text-transform:uppercase;
+                      color:var(--cyan); margin-bottom:3px; text-align:right; }
+
+  /* réponse de l'agent : pleine largeur, liseré violet à gauche */
+  .agent { color:var(--texte); border-left:2px solid rgba(167,139,250,.55);
+           padding:2px 0 2px 16px; margin-bottom:22px; }
+  .agent .qui { display:block; font-size:11px; font-weight:700;
+                letter-spacing:.06em; text-transform:uppercase;
+                color:var(--violet); margin-bottom:6px; }
   .agent pre { background:var(--panneau); border:1px solid var(--bordure);
                border-radius:10px; padding:12px; overflow-x:auto;
                font:13px Consolas,monospace; }
   .agent code.enligne { background:var(--panneau); border-radius:5px;
                         padding:1px 6px; font-family:Consolas,monospace;
                         font-size:13px; color:var(--cyan); }
+  .chevron { color:var(--cyan); font-weight:700; margin-right:8px; }
   .outil { color:var(--gris); font-size:13.5px; margin:10px 0; }
   .pt { margin-right:8px; }
   .pt-0 { color:var(--vert); } .pt-1 { color:var(--jaune); }
@@ -276,7 +289,8 @@ document.getElementById('formulaire').addEventListener('submit', async (e) => {
     return;
   }
   masque_accueil();
-  ajoute('<div class="bulle-utilisateur">' + echappe(texte) + '</div>', 'utilisateur');
+  ajoute('<div class="bulle"><span class="qui">Vous</span>'
+         + echappe(texte) + '</div>', 'utilisateur');
   bouton.disabled = true;
   etat.textContent = 'en action…';
   const reponse = await fetch('/tache', {method:'POST',
@@ -328,9 +342,11 @@ source.onmessage = (e) => {
           = d.titre;
         h.historique.forEach((entree) => {
           if (entree.role === 'utilisateur')
-            ajoute('<span class="chevron">&gt;</span> ' + echappe(entree.texte), 'utilisateur');
+            ajoute('<div class="bulle"><span class="qui">Vous</span>'
+                   + echappe(entree.texte) + '</div>', 'utilisateur');
           else
-            ajoute(rendu_md(entree.texte), 'agent');
+            ajoute('<span class="qui">LuluCode</span>'
+                   + rendu_md(entree.texte), 'agent');
         });
       });
       break;
@@ -340,7 +356,7 @@ source.onmessage = (e) => {
       break;
     case 'texte':
       if (d.deja_affiche) break;
-      ajoute(rendu_md(d.texte || ''), 'agent');
+      ajoute('<span class="qui">LuluCode</span>' + rendu_md(d.texte || ''), 'agent');
       break;
     case 'outil_appel': {
       const a = d.arguments || {};

@@ -139,3 +139,17 @@ class TestTacheRoute:
             reponse = client.get("/")
             assert reponse.status_code == 200
             assert "LuluCode" in reponse.text
+
+    def test_differenciation_messages_distinguable(self):
+        """La page distingue visuellement utilisateur et agent :
+        badge « Vous » (bulle dégradé) et badge « LuluCode » (liseré)."""
+        configure(AgentFictif())
+        from lulucode.server.page import PAGE
+
+        assert 'class="bulle"><span class="qui">Vous' in PAGE
+        assert '<span class="qui">LuluCode</span>' in PAGE
+        # Bulle utilisateur distincte (dégradé + bord cyan) :
+        assert 'linear-gradient(135deg' in PAGE
+        # Liseré violet de l'agent :
+        assert 'border-left:2px solid rgba(167,139,250' in PAGE
+
