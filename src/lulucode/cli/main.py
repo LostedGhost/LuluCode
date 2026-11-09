@@ -43,20 +43,72 @@ def config_init() -> None:
     click.echo("Éditez ensuite le nom du modèle, puis lancez lulucode dans votre projet.")
 
 
+@app.command("web-build")
+def web_build() -> None:
+    """Reconstruit l'interface web (npm run build) et l'embarque.
+
+    À utiliser après avoir modifié le code de web/ : le bundle est
+    copié dans le paquet, la commande `lulucode web` le servira.
+    Cancer que le dossier web/ exige npm (Node 20+).
+    """
+    import shutil
+    import subprocess
+
+    racine_web = Path(__file__).resolve().parents[3] / "web"
+    if not racine_web.is_dir():
+        click.echo(
+            "Pas de dossier web/ ici : vous utilisez une installation pipx.\n"
+            "Pour redéployer une interface modifiée, installez le dépôt puis :\n"
+            "  git clone https://github.com/LostedGhost/LuluCode\n"
+            "  cd LuluCode && pip install -e . && python -m lulucode.cli.main web-build",
+            err=True,
+        )
+        sys.exit(1)
+
+    click.echo("Construction du bundle React…")
+    resultat = subprocess.run(
+        ["npm", "run", "build"],
+        cwd=racine_web,
+        capture_output=True,
+        text=True,
+        shell=(os.name == "nt"),
+    )
+    if resultat.returncode != 0:
+        click.echo(resultat.stdout[-2000:] + (resultat.stderr or ""), err=True)
+        click.echo("échec du build npm", err=True)
+        sys.exit(1)
+    click.echo((resultat.stdout or "").strip()[-400:])
+
+    destination = Path(__file__).resolve().parents[2] / "server" / "web_dist"
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(racine_web / "dist", destination)
+    click.echo(f"Bundle embarqué : {destination}")
+    click.echo("(réinstallez via `lulucode update` pour une installation pipx)")
+
+
 @app.command()
 @click.option("--profil", "-p", default=None, help="(ancien nom) profil de modèle")
 @click.option("--mode", "-m", default="normal",
               help="Mode de permission : normal, auto, bypass, strict, lecture-seule")
 @click.option("--port", default=8341, help="Port du serveur web")
+@click.option("--dev", is_flag=True, default=False,
+              help="Avancer le front sur le serveur Vite de web/ (hot reload, exige npm)")
 @click.argument("profil_positionne", required=False, default=None)
-def web(profil: str | None, mode: str, port: int, profil_positionne: str | None) -> None:
-    """Démarre l'interface web locale (n'écoute que sur votre machine)."""
+def web(profil: str | None, mode: str, port: int, dev: bool,
+        profil_positionne: str | None) -> None:
+    """Démarre l'interface web locale (n'écoute que sur votre machine).
+
+    Simple : `lulucode web distant` puis ouvrez l'URL affichée.
+    Le bundle React embarqué est servi ; pour développer l'interface
+    avec rechargement à chaud, ajoutez --dev (Node requis).
+    """
     try:
         import uvicorn
     except ImportError:
         click.echo(
             "Les dépendances web ne sont pas installées. Lancez :\n"
-            "  python -m pipx install --force --extras web lulucode",
+            "  python -m pipx install --force lulucode && python -m pipx inject lulucode fastapi uvicorn pydantic",
             err=True,
         )
         sys.exit(1)
@@ -93,9 +145,31 @@ def web(profil: str | None, mode: str, port: int, profil_positionne: str | None)
 
     url = configure(agent, port=port)
     click.echo(f"LuluCode web — ouvrez : {url}")
-    click.echo("(n'écoute que 127.0.0.1, jeton renouvelé à chaque lancement ;"
-               " Ctrl+C pour arrêter)")
-    uvicorn.run(app_facteur(), host="127.0.0.1", port=port, log_level="warning")
+    click.echo("(n'écoute que 127.0.0.1 ; Ctrl+C pour arrêter)")
+
+    if not dev:
+        uvicorn.run(app_facteur(), host="127.0.0.1", port=port, log_level="warning")
+        return
+
+    # Mode dev : le front est servi par Vite (rechargement à chaud),
+    # l'API reste ici. On démarre Vite en sous-process puis uvicorn.
+    import shutil
+    import subprocess
+
+    racine_web = Path(__file__).resolve().parents[3] / "web"
+    if not (racine_web / "package.json").is_file():
+        click.echo("Mode --dev : dossier web/ introuvable (installation pipx sans dépôt).", err=True)
+        sys.exit(1)
+    click.echo("Démarrage de Vite (rechargement à chaud) sur le port 5173…")
+    vite = subprocess.Popen(
+        ["npm", "run", "dev"],
+        cwd=racine_web,
+        shell=(os.name == "nt"),
+    )
+    try:
+        uvicorn.run(app_facteur(), host="127.0.0.1", port=port, log_level="warning")
+    finally:
+        vite.terminate()
 
 
 def app_facteur():
