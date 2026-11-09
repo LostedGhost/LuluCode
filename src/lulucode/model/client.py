@@ -7,6 +7,7 @@ distant : c'est le profil qui change, jamais le code.
 from __future__ import annotations
 
 import json
+import time
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -175,11 +176,25 @@ class ClientModele:
         corps: dict[str, Any] = {"model": self.profil.model, "messages": messages}
         if outils:
             corps["tools"] = outils
-        try:
-            reponse = self._client.post("/chat/completions", json=corps)
-            reponse.raise_for_status()
-        except httpx.HTTPError as e:
-            raise ErreurModele(f"appel du modèle impossible : {e}") from e
+        # Les passerelles multi-fournisseurs (ex. FreeLLMAPI) répondent 429
+        # quand tous les quotas vision/texte du moment sont épuisés ; une
+        # fenêtre se libère d'habitude en quelques secondes. Deux essais de
+        # plus avec attente, comme les appels d'outils invalides.
+        for tentative in range(3):
+            try:
+                reponse = self._client.post("/chat/completions", json=corps)
+                if reponse.status_code == 429 and tentative < 2:
+                    time.sleep(15 * (tentative + 1))  # 15 s puis 30 s
+                    continue
+                reponse.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                raise ErreurModele(f"appel du modèle impossible : {e}") from e
+            except httpx.HTTPError as e:
+                if tentative < 2:
+                    time.sleep(15 * (tentative + 1))
+                    continue
+                raise ErreurModele(f"appel du modèle impossible : {e}") from e
+            break
         try:
             choix = reponse.json()["choices"][0]["message"]
         except (KeyError, IndexError, ValueError) as e:
