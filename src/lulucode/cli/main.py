@@ -44,6 +44,68 @@ def config_init() -> None:
 
 
 @app.command()
+@click.option("--profil", "-p", default=None, help="(ancien nom) profil de modèle")
+@click.option("--mode", "-m", default="normal",
+              help="Mode de permission : normal, auto, bypass, strict, lecture-seule")
+@click.option("--port", default=8341, help="Port du serveur web")
+@click.argument("profil_positionne", required=False, default=None)
+def web(profil: str | None, mode: str, port: int, profil_positionne: str | None) -> None:
+    """Démarre l'interface web locale (n'écoute que sur votre machine)."""
+    try:
+        import uvicorn
+    except ImportError:
+        click.echo(
+            "Les dépendances web ne sont pas installées. Lancez :\n"
+            "  python -m pipx install --force --extras web lulucode",
+            err=True,
+        )
+        sys.exit(1)
+
+    from lulucode.model.client import ClientModele, charge_config, profil_actif
+    from lulucode.permissions.moteur import Mode
+    from lulucode.server.app import configure
+
+    try:
+        config = charge_config()
+        p = profil_actif(config, profil_positionne or profil)
+        mode_perm = Mode(mode)
+    except (FileNotFoundError, ValueError) as e:
+        click.echo(f"Configuration : {e}", err=True)
+        sys.exit(1)
+
+    from lulucode.core.agent import Agent, Plafonds, construit_prompt_systeme, prompt_avec_skills
+    from lulucode.permissions.moteur import Moteur
+
+    general = config.get("general", {})
+    agent = Agent(
+        client=ClientModele(p),
+        zone=Path.cwd(),
+        moteur=Moteur(mode=mode_perm, sures=config.get("permissions", {}).get("commandes_sures", [])),
+        plafonds=Plafonds(
+            etapes=int(general.get("plafond_etapes", 40)),
+            tokens=int(general.get("plafond_tokens", 200_000)),
+        ),
+        systeme=prompt_avec_skills(
+            construit_prompt_systeme(zone=Path.cwd(), mode=mode_perm.value),
+            zone=Path.cwd(),
+        ),
+    )
+
+    url = configure(agent, port=port)
+    click.echo(f"LuluCode web — ouvrez : {url}")
+    click.echo("(n'écoute que 127.0.0.1, jeton renouvelé à chaque lancement ;"
+               " Ctrl+C pour arrêter)")
+    uvicorn.run(app_facteur(), host="127.0.0.1", port=port, log_level="warning")
+
+
+def app_facteur():
+    """Renvoie l'app FastAPI du serveur web."""
+    from lulucode.server.app import app as serveur
+
+    return serveur
+
+
+@app.command()
 @click.option("--profil", "-p", default=None, help="(ancien nom) profil de modèle pour cette session")
 @click.option("--mode", "-m", default="normal", help="Mode de permission : normal, auto, bypass, strict, lecture-seule")
 @click.option("--tache", "-t", default=None, help="Exécute cette tâche unique puis quitte")

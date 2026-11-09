@@ -29,8 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-terminal = []  # rich est désormais une dépendance principale
-web = ["fastapi>=0.111", "uvicorn>=0.30"]
+web = ["fastapi>=0.111", "uvicorn>=0.30", "pydantic>=2.8"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

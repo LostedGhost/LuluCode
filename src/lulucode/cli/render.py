@@ -118,6 +118,8 @@ class RenduRiche:
                 "jaune": JAUNE,
                 "rouge": ROUGE,
                 "etat": SECONDAIRE,
+                "markdown.table.header": f"bold {CYAN}",
+                "markdown.table.border": BORDE,
             }),
         )
 
@@ -411,25 +413,66 @@ def cree_rendu() -> RenduSimple | RenduRiche:
     return rendu
 
 
-def _tableaux_delimites() -> None:
-    """Tableaux Markdown avec colonnes délimitées (bordures verticales).
+_tableaux_patched = False
 
-    Rich rend les tableaux Markdown avec box=SIMPLE : une ligne sous
-    l'en-tête, mais aucune séparation entre les colonnes — difficile à
-    lire sur un tableau large. On remplace le style de boîte dans le
-    constructeur de Table utilisé par rich.markdown, à la volée.
+
+def _tableaux_delimites() -> None:
+    """Tableaux Markdown façon Claude Code : en-tête distincte, rangées
+    séparées, bordures discrètes, sans cadre complet.
+
+    Rich rend les tableaux Markdown avec box=SIMPLE : une seule ligne
+    sous l'en-tête, ni séparation entre les colonnes ni entre les
+    rangées. HEAVY_HEAD délimite tout, mais trace un cadre complet
+    (coins pleins, aspect « encadré »). Le plus proche du style des
+    agents de code modernes est une boîte sur mesure : côtés ouverts,
+    lignes fines entre les rangées, barres verticales discrètes entre
+    les colonnes, règle épaisse sous l'en-tête.
+
+    On remplace boîte, séparateurs de rangées et couleur des bordures
+    dans le constructeur de Table utilisé par rich.markdown, à la
+    volée ; l'en-tête, lui, est stylé via le thème de la console
+    (markdown.table.header, voir RenduRiche.__init__).
     """
     from rich import box as rich_box
+    from rich.box import Box
     from rich.markdown import TableElement
     from rich.table import Table
+
+    # Idempotent : un second appel (tests, session plein écran) ne doit
+    # pas empiler un deuxième emballage autour de Table.__init__.
+    global _tableaux_patched
+    if _tableaux_patched:
+        return
+    _tableaux_patched = True
+
+    #   (côtés ouverts : pas de haut/bas ni d'angles)
+    #   ligne 2 (head)      : barres verticales sous le texte d'en-tête
+    #   ligne 3 (head_row)  : règle épaisse ━ sous l'en-tête
+    #   ligne 4 (mid)       : barres verticales entre les rangées
+    #   ligne 5 (row)       : règle fine ─ entre chaque rangée de données
+    #   ligne 6 (foot_row)  : règle fine ─ avant un pied de tableau éventuel
+    #   ligne 7 (foot)      : barres verticales pour le pied de tableau
+    TABLEAU_LULUCODE = Box(
+        "    \n"
+        " ││ \n"
+        " ━━ \n"
+        " ││ \n"
+        " ── \n"
+        " ── \n"
+        " ││ \n"
+        "    \n"
+    )
 
     original = Table.__init__
 
     def init_avec_bordures(table: Any, *args: Any, **kwargs: Any) -> None:
         if kwargs.get("box") is rich_box.SIMPLE and kwargs.get("style") == "markdown.table.border":
-            # HEAVY_HEAD : boîte complète, colonnes délimitées par des
-            # barres verticales, en-tête séparé par une ligne épaisse.
-            kwargs["box"] = rich_box.HEAVY_HEAD
+            kwargs["box"] = TABLEAU_LULUCODE
+            # Une ligne entre chaque rangée de données.
+            kwargs["show_lines"] = True
+            # Bordures discrètes (gris secondaire plutôt que le noir
+            # par défaut de markdown.table.border sans thème).
+            kwargs["border_style"] = SECONDAIRE
         original(table, *args, **kwargs)
 
     Table.__init__ = init_avec_bordures
