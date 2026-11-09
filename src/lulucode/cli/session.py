@@ -127,7 +127,7 @@ class Session:
             while True:
                 self.invite()
                 try:
-                    requis = self.saisie_texte()
+                    requis = await self.saisie_texte()
                 finally:
                     self.fin_invite()
                 if not requis:
@@ -149,8 +149,14 @@ class Session:
 
     # --- saisie -------------------------------------------------------------
 
-    def saisie_texte(self) -> str:
-        """Lecture : prompt_toolkit (historique) si console compatible."""
+    async def saisie_texte(self) -> str:
+        """Lecture : prompt_toolkit (historique) si console compatible.
+
+        Dans une boucle asyncio en cours, `PromptSession.prompt()`
+        synchrone retourne une coroutine non attendue : on utilise
+        `prompt_async()` qui gère historique et édition au-dessus de
+        l'event loop sans la bloquer.
+        """
         try:
             from prompt_toolkit import PromptSession
             from prompt_toolkit.history import FileHistory
@@ -167,19 +173,23 @@ class Session:
                     history=FileHistory(str(dossier / "historique")),
                     enable_history_search=True,
                 )
-            return self._pt_session.prompt("").rstrip()
+            return (await self._pt_session.prompt_async("")).rstrip()
         except (KeyboardInterrupt, EOFError):
             raise  # sortie demandée : la boucle la traite
         except Exception:
             # Console non compatible : saisie Click simple.
-            return self._saisie_click()
+            return await self._saisie_click()
 
     @staticmethod
-    def _saisie_click() -> str:
+    async def _saisie_click() -> str:
+        import asyncio
         import click
 
         try:
-            return click.prompt("", default="", show_default=False).strip()
+            return await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: click.prompt("", default="", show_default=False).strip(),
+            )
         except (KeyboardInterrupt, EOFError):
             raise
 
