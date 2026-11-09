@@ -93,7 +93,9 @@ class RenduSimple:
     def plafond(self, raison: str) -> None:
         self._click.echo(f"  [plafond] {raison}")
 
-    def au_revoir(self) -> None:
+    def au_revoir(self, message: str = "") -> None:
+        if message:
+            self._click.echo(f"Vous : {message}")
         self._click.echo("À bientôt.")
 
 
@@ -294,10 +296,14 @@ class RenduRiche:
         bloc.append(raison, style=SECONDAIRE)
         self.console.print(bloc)
 
-    def au_revoir(self) -> None:
+    def au_revoir(self, message: str = "") -> None:
         from rich.text import Text
 
         bloc = Text()
+        if message:
+            bloc.append("Vous : ", style=SECONDAIRE)
+            bloc.append(message, style=TEXTE)
+            bloc.append("\n", style="")
         bloc.append("À bientôt.", style=SECONDAIRE)
         self.console.print(bloc)
 

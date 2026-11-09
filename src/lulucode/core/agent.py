@@ -135,6 +135,13 @@ def construit_prompt_systeme(
     return prompt + note
 
 
+def prompt_avec_skills(prompt_systeme: str, zone: Path | None = None) -> str:
+    """Ajoute la liste des skills découverts au prompt système."""
+    from lulucode.core.skills import decouvre_skills, liste_pour_modele
+
+    return prompt_systeme + liste_pour_modele(decouvre_skills(zone))
+
+
 
 @dataclass
 class Agent:

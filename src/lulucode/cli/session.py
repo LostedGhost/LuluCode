@@ -134,19 +134,138 @@ class Session:
                 if not requis:
                     continue
                 if veut_sortir(requis):
-                    self.rendu.au_revoir()
+                    # Message de sortie facultatif : « exit merci beaucoup ».
+                    morceaux_sortie = requis.strip().split(maxsplit=1)
+                    message_sortie = (
+                        morceaux_sortie[1].strip() if len(morceaux_sortie) > 1 else ""
+                    )
+                    self.rendu.au_revoir(message_sortie)
                     return
                 if requis.strip().lower() == "/aide":
                     self.rendu.texte_agent(
                         "**Commandes**\n\n"
                         "- `/aide` — cette liste\n"
-                        "- `exit` ou `/quitter` — sortir\n"
+                        "- `/mode` — affiche ou change le mode de permission "
+                        "(`normal`, `strict`, `lecture-seule`)\n"
+                        "- `/skill [nom]` — liste les skills, ou montre celui-ci ; "
+                        "`/skill nom tâche` exécute la tâche guidée par le skill\n"
+                        "- `exit [message]` ou `/quitter [message]` — sortir, "
+                        "avec un message facultatif\n"
                         "- ↑/↓ — historique de saisie"
                     )
                     continue
-                await self.execute(requis)
+                if requis.strip().lower().startswith("/mode"):
+                    self._change_mode(requis.strip())
+                    continue
+                if requis.strip().lower().startswith("/skill"):
+                    self._gere_skill(requis.strip())
+                    continue
+                # `/skill nom` en tête de tâche : le corps du skill guide
+                # l'exécution de cette tâche précise (comme /skill de Claude).
+                await self.execute(self._prefixe_skill_eventuel(requis))
         finally:
             self.sort_plein_ecran()  # le shell réapparaît tel quel
+
+    def _change_mode(self, requete: str) -> None:
+        """/mode affiche le mode courant ; `/mode strict` le change.
+
+        Le changement est volontairement restreint : seule une commande
+        explicite de l'utilisateur dans la session peut le faire, jamais
+        le contenu d'un message, d'un fichier ou d'une sortie d'outil
+        (garantie de sécurité du projet, rappelée par le system prompt).
+        """
+        from lulucode.permissions.moteur import Mode
+
+        morceaux = requete.split(maxsplit=1)
+        moteur = self.agent.moteur
+        if len(morceaux) == 1:
+            self.rendu.texte_agent(
+                f"Mode actuel : **{moteur.mode.value}**.\n\n"
+                "Modes disponibles : `normal`, `strict`, `lecture-seule`. "
+                "Exemple : `/mode strict`."
+            )
+            return
+        cible = morceaux[1].strip().lower()
+        try:
+            nouveau = Mode(cible)
+        except ValueError:
+            self.rendu.erreur(
+                f"mode inconnu : {cible} (modes : normal, strict, lecture-seule)"
+            )
+            return
+        ancien = moteur.mode
+        moteur.mode = nouveau
+        consequence = {
+            Mode.NORMAL: "",
+            Mode.STRICT: " Toutes les actions attendront maintenant une validation, lectures comprises.",
+            Mode.LECTURE_SEULE: " Aucune écriture ni commande ne sera exécutée, lecture et plan uniquement.",
+        }[nouveau]
+        self.rendu.texte_agent(
+            f"Mode changé : **{ancien.value}** → **{nouveau.value}**.{consequence}"
+        )
+
+    # --- skills -------------------------------------------------------------
+
+    def _skills(self) -> list:
+        from lulucode.core.skills import decouvre_skills
+
+        if not hasattr(self, "_cache_skills"):
+            self._cache_skills = decouvre_skills(self.agent.zone)
+        return self._cache_skills
+
+    def _gere_skill(self, requete: str) -> None:
+        """/skill liste les skills ; `/skill nom` montre leur corps."""
+        from lulucode.core.skills import corps_du_skill
+
+        morceaux = requete.split(maxsplit=1)
+        skills = self._skills()
+        if len(morceaux) == 1:
+            if not skills:
+                self.rendu.texte_agent(
+                    "Aucun skill trouvé.\n\n"
+                    "Placez un dossier `SKILL.md` dans `.lulucode/skills/<nom>/` "
+                    "(projet) ou `~/.lulucode/skills/<nom>/` (utilisateur), "
+                    "avec un frontmatter `name:` + `description:`."
+                )
+                return
+            lignes = "\n".join(f"- **{s.name}** — {s.description}" for s in skills)
+            self.rendu.texte_agent(
+                f"**Skills disponibles**\n\n{lignes}\n\n"
+                "Usage : `/skill nom` pour voir son contenu, ou faites suivre "
+                "une tâche de `/skill nom` (ex. « /skill revue revois agent.py »)."
+            )
+            return
+        nom = morceaux[1].strip()
+        corps = corps_du_skill(skills, nom)
+        if corps is None:
+            self.rendu.erreur(f"skill inconnu : {nom}")
+            return
+        extrait = corps.strip()[:2000]
+        suite = " … (tronqué à l'affichage)" if len(corps.strip()) > 2000 else ""
+        self.rendu.texte_agent(f"**Skill `{nom}`**\n\n```markdown\n{extrait}\n```{suite}")
+
+    def _prefixe_skill_eventuel(self, tache: str) -> str:
+        """`/skill nom reste de la tâche` → tâche guidée par le skill.
+
+        Le corps du skill est inséré en tête de la tâche : le modèle le
+        reçoit comme consigne prioritaire pour cet unique envoi.
+        """
+        from lulucode.core.skills import corps_du_skill
+
+        morceaux = tache.split(maxsplit=2)
+        if len(morceaux) < 2 or morceaux[0].lower() != "/skill":
+            return tache
+        nom = morceaux[1]
+        reste = morceaux[2] if len(morceaux) > 2 else ""
+        corps = corps_du_skill(self._skills(), nom)
+        if corps is None:
+            self.rendu.erreur(f"skill inconnu : {nom} — tâche exécutée sans le skill")
+            return reste
+        prefixe = (
+            f"# Skill actif : {nom}\n\n{corps.strip()}\n\n---\n\n"
+            "# Tâche à réaliser en suivant ce skill\n\n"
+        )
+        return prefixe + (reste or "Applique ce skill.")
 
     # --- saisie -------------------------------------------------------------
 
