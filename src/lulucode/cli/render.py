@@ -400,7 +400,33 @@ def cree_rendu() -> RenduSimple | RenduRiche:
         import rich  # noqa: F401
     except ImportError:
         return RenduSimple()
-    return RenduRiche()
+    rendu = RenduRiche()
+    _tableaux_delimites()
+    return rendu
+
+
+def _tableaux_delimites() -> None:
+    """Tableaux Markdown avec colonnes délimitées (bordures verticales).
+
+    Rich rend les tableaux Markdown avec box=SIMPLE : une ligne sous
+    l'en-tête, mais aucune séparation entre les colonnes — difficile à
+    lire sur un tableau large. On remplace le style de boîte dans le
+    constructeur de Table utilisé par rich.markdown, à la volée.
+    """
+    from rich import box as rich_box
+    from rich.markdown import TableElement
+    from rich.table import Table
+
+    original = Table.__init__
+
+    def init_avec_bordures(table: Any, *args: Any, **kwargs: Any) -> None:
+        if kwargs.get("box") is rich_box.SIMPLE and kwargs.get("style") == "markdown.table.border":
+            # HEAVY_HEAD : boîte complète, colonnes délimitées par des
+            # barres verticales, en-tête séparé par une ligne épaisse.
+            kwargs["box"] = rich_box.HEAVY_HEAD
+        original(table, *args, **kwargs)
+
+    Table.__init__ = init_avec_bordures
 
 
 def _branche_blocs(cls: type) -> type:
