@@ -52,26 +52,32 @@ def session_prete():
     return agent, session
 
 
-class TestSecurite:
-    def test_page_sans_jeton_refusee(self):
-        configure(AgentFictif())
+class TestAcces:
+    def test_page_sans_serveur_actif(self):
         with TestClient(app) as c:
             reponse = c.get("/")
-            assert "jeton" in reponse.text.lower()
+            assert reponse.status_code == 200
+            assert "aucune session" in reponse.text.lower()
 
-    def test_api_sans_jeton_refusee(self):
-        with TestClient(app) as c:
-            assert c.get("/evenements").status_code == 401
-            reponse = c.post("/tache", json={"tache": "x"})
-            assert reponse.status_code == 401
-
-    def test_page_avec_jeton_servie(self):
+    def test_page_configuree_servie(self):
         url = configure(AgentFictif())
-        token = url.split("token=")[1]
+        assert "token=" not in url  # option B : pas de jeton
         with TestClient(app) as c:
-            reponse = c.get("/", params={"token": token})
+            reponse = c.get("/")
             assert reponse.status_code == 200
             assert "LuluCode" in reponse.text
+
+    def test_api_sans_session_401(self):
+        from lulucode.server import app as module_app
+
+        Sauvegarde = module_app.session_active
+        module_app.session_active = None  # état global : test isolé
+        try:
+            with TestClient(app) as c:
+                reponse = c.post("/tache", json={"tache": "x"})
+                assert reponse.status_code == 401
+        finally:
+            module_app.session_active = Sauvegarde
 
 
 class TestSessionWeb:
@@ -117,18 +123,19 @@ class TestSessionWeb:
         assert asyncio.run(_run()) is False
 
 
-class TestRoutes:
-    def test_post_tache_sans_jeton(self):
+class TestTacheRoute:
+    def test_post_tache_lance_et_repond(self):
         configure(AgentFictif())
         with TestClient(app) as client:
-            assert client.post(
-                "/tache", json={"tache": "x"}
-            ).status_code == 401
+            reponse = client.post(
+                "/tache", json={"tache": "test"}
+            )
+            assert reponse.status_code == 200
+            assert reponse.json()["statut"] == "lancee"
 
-    def test_page_avec_jeton(self):
-        url = configure(AgentFictif())
-        token = url.split("token=")[1]
+    def test_page_avec_serveur_configure(self):
+        configure(AgentFictif())
         with TestClient(app) as client:
-            reponse = client.get("/", params={"token": token})
+            reponse = client.get("/")
             assert reponse.status_code == 200
             assert "LuluCode" in reponse.text

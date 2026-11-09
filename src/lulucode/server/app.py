@@ -4,8 +4,10 @@ Un seul cœur, une deuxième façade : le serveur pilote le même Agent que
 le terminal (contrat d'événements identique), avec les demandes de
 permission rendues comme boutons dans la page.
 
-Sécurité (conformité README) : écoute uniquement sur 127.0.0.1, jeton
-généré à chaque lancement et affiché une fois dans la console.
+Sécurité : écoute uniquement sur 127.0.0.1 (jamais exposé au réseau).
+Pas de jeton : l'interface est volontairement immédiate, au prix du
+risque résiduel lié aux requêtes cross-origin depuis votre propre
+navigateur (opt-out documenté dans le README).
 
 Lancement : `lulucode web [profil] [--mode M] [--port P]`.
 """
@@ -14,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import secrets
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -76,30 +77,26 @@ class _EmetteurWeb:
 app = FastAPI(title="LuluCode")
 
 session_active: SessionWeb | None = None
-jeton_acces: str = ""
-_port_ecoute: int = 8341
 
 
 def configure(agent: Any, port: int = 8341) -> str:
-    """Branche l'agent, génère le jeton, renvoie l'URL complète."""
-    global session_active, jeton_acces, _port_ecoute
+    """Branche l'agent au serveur, renvoie l'URL d'accès."""
+    global session_active
     session_active = SessionWeb(agent)
-    _port_ecoute = port
-    jeton_acces = __import__("secrets").token_urlsafe(24)
-    return f"http://127.0.0.1:{port}/?token={jeton_acces}"
+    return f"http://127.0.0.1:{port}/"
 
 
 @app.get("/", response_class=HTMLResponse)
-async def page(token: str = "") -> HTMLResponse:
-    if token != jeton_acces or session_active is None:
+async def page() -> HTMLResponse:
+    if session_active is None:
         return HTMLResponse(_page_acces_refuse())
     return HTMLResponse(_page_session())
 
 
 @app.get("/evenements")
-async def evenements(token: str = "") -> StreamingResponse:
+async def evenements() -> StreamingResponse:
     """Flux SSE de tous les événements du cœur, au fil de l'eau."""
-    _verifie(token)
+    _verifie()
     session = session_active
 
     async def genere():
@@ -120,8 +117,8 @@ class DemandeTache(BaseModel):
 
 
 @app.post("/tache")
-async def lance_tache(demande: DemandeTache, token: str = "") -> dict:
-    _verifie(token)
+async def lance_tache(demande: DemandeTache) -> dict:
+    _verifie()
     session = session_active
     if session.tache_en_cours:
         raise HTTPException(409, "une tâche est déjà en cours")
@@ -151,15 +148,15 @@ class ReponsePermission(BaseModel):
 
 
 @app.post("/permission")
-async def repond_permission(demande: ReponsePermission, token: str = "") -> dict:
-    _verifie(token)
+async def repond_permission(demande: ReponsePermission) -> dict:
+    _verifie()
     await session_active.repond_permission(demande.identifiant, demande.accepte)
     return {"statut": "ok"}
 
 
-def _verifie(token: str) -> None:
-    if token != jeton_acces or session_active is None:
-        raise HTTPException(401, "jeton invalide")
+def _verifie() -> None:
+    if session_active is None:
+        raise HTTPException(401, "aucune session active (relancez lulucode web)")
 
 
 # --- pages -------------------------------------------------------------------
@@ -193,7 +190,6 @@ _PAGE = """<!doctype html>
   .agent { color:var(--texte); }
   .outil { color:var(--gris); font-size:14px; margin:10px 0; }
   .point-l { color:var(--vert); margin-right:8px; }
-  .point-l1 { color:var(--jaune); margin-right:8px; }
   .point-erreur { color:var(--rouge); margin-right:8px; }
   .erreur { color:var(--rouge); }
   .plafond { color:var(--jaune); font-size:14px; }
@@ -213,12 +209,12 @@ _PAGE = """<!doctype html>
   .perm .oui { border-color:var(--vert); color:var(--vert); }
   .perm .oui-session { border-color:var(--bleu); color:var(--bleu); }
   .perm .non { border-color:var(--rouge); color:var(--rouge); }
-  form.envois { display:flex; gap:10px; padding:12px 18px;
-                border-top:1px solid var(--bordure); background:var(--panneau); }
+  form.envoi { display:flex; gap:10px; padding:12px 18px;
+               border-top:1px solid var(--bordure); background:var(--panneau); }
   form.envoi input { flex:1; background:var(--fond); color:var(--texte);
                      border:1px solid var(--bordure); border-radius:8px;
                      padding:10px 12px; font-size:15px; }
-  form.environ input:focus { outline:1px solid var(--cyan); }
+  form.envoi input:focus { outline:1px solid var(--cyan); }
   form.envoi button { background:var(--cyan); color:#0d1117; border:0;
                       border-radius:8px; padding:0 18px; font-weight:700;
                       cursor:pointer; }
@@ -231,17 +227,14 @@ _PAGE = """<!doctype html>
   <span class="etat" id="etat">connexion…</span>
 </header>
 <div id="journal"></div>
-<form class="envoi" id="envoi">
-  <input id="saisie" placeholder="Décrivez une tâche, ou /aide · exit pour sortir"
+<form class="envoi" id="formulaire">
+  <input id="saisie" placeholder="Décrivez une tâche · exit pour sortir"
          autocomplete="off" autofocus>
-  <button id="envoie" type="submit">Envoyer</button>
+  <button id="bouton-envoi" type="submit">Envoyer</button>
 </form>
 <script>
-const jeton = new URLSearchParams(location.search).get('token') || '';
 const journal = document.getElementById('journal');
 const etat = document.getElementById('etat');
-const formulaire = document.getElementById('envoi-form');
-const champ = document.getElementById('saisie');
 
 function echappe(t) { const d = document.createElement('div');
                       d.textContent = t == null ? '' : String(t);
@@ -251,14 +244,12 @@ function ajoute(html, classe) {
   const div = document.createElement('div');
   div.className = 'bloc ' + (classe || '');
   div.innerHTML = html;
-  document.getElementById('journal').appendChild(div);
+  journal.appendChild(div);
   journal.scrollTop = journal.scrollHeight;
 }
 
-function bouton(f) { return document.getElementById('bouton-envoi'); }
-
 // --- envoi de tâche ---
-document.getElementById('envoi-form').addEventListener('submit', async (e) => {
+document.getElementById('envoi').addEventListener('submit', async (e) => {
   e.preventDefault();
   const champ = document.getElementById('saisie');
   const texte = champ.value.trim();
@@ -266,14 +257,14 @@ document.getElementById('envoi-form').addEventListener('submit', async (e) => {
   if (!texte) return;
   if (/^(exit|quit|quitter|\\/exit|\\/quit|\\/quitter)$/i.test(texte)) {
     ajoute('<span class="chevron">&gt;</span>', 'utilisateur');
-    ajoute('Session web terminée. Fermez l\\'onglet, puis le serveur reste actif'
-           + ' jusqu'à Ctrl+C dans le terminal.', 'agent');
+    ajoute('Session terminée du côté de la page. Le serveur reste actif, '
+           + 'arrêtez-le par Ctrl+C dans le terminal.', 'agent');
     return;
   }
   ajoute('<span class="chevron">&gt;</span> ' + echappe(texte), 'utilisateur');
   document.getElementById('bouton-envoi').disabled = true;
   etat.textContent = 'agent en action…';
-  const reponse = await fetch('/tache?token=' + jeton, {
+  const reponse = await fetch('/tache', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({tache: texte}),
   });
@@ -286,7 +277,7 @@ document.getElementById('envoi-form').addEventListener('submit', async (e) => {
 });
 
 // --- flux SSE ---
-const source = new EventSource('/evenements?token=' + jeton);
+const source = new EventSource('/evenements');
 source.onmessage = (e) => {
   let ev; try { ev = JSON.parse(e.data); } catch { return; }
   const d = ev.donnees || {};
@@ -300,8 +291,7 @@ source.onmessage = (e) => {
       const a = d.arguments || {};
       const cible = a.chemin || a.commande || a.motif
                     || Object.values(a).join(', ');
-      const n = d.niveau ?? 1;
-      ajoute('<span class="point point-' + n + '">⏺</span>'
+      ajoute('<span class="point-l">⏺</span>'
              + echappe(d.outil || '') + ' · ' + echappe(cible), 'outil');
       break;
     }
@@ -327,19 +317,19 @@ source.onmessage = (e) => {
       bloc.querySelectorAll('button').forEach((b) => {
         b.addEventListener('click', async () => {
           b.disabled = true;
-          await fetch('/permission?token=' + jeton, {method:'POST',
+          await fetch('/permission', {method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({identifiant: b.dataset.i,
                                   accepte: b.classList.contains('oui')})});
           bloc.remove();
         });
       });
-      document.getElementById('journal').appendChild(bloc);
+      journal.appendChild(bloc);
       journal.scrollTop = journal.scrollHeight;
       break;
     }
     case 'erreur':
-      ajoute('<span class="point point-erreur">⏺</span> erreur · '
+      ajoute('<span class="point-erreur">⏺</span> erreur · '
              + echappe(d.message || ''), 'erreur');
       break;
     case 'plafond':
@@ -368,9 +358,9 @@ def _page_session() -> str:
 
 def _page_acces_refuse() -> str:
     return """<!doctype html><html lang="fr"><head><meta charset="utf-8">
-<title>LuluCode — accès refusé</title></head>
+<title>LuluCode</title></head>
 <body style="background:#0d1117;color:#e6edf3;font:16px sans-serif;display:flex;
              align-items:center;justify-content:center;height:100vh;margin:0">
-<p style="color:#8b949e;max-width:480px;text-align:center">Jeton manquant ou
-invalide. Relancez <code>lulucode web</code> et ouvrez l'URL affichée (le jeton
-est renouvelé à chaque lancement).</p></body></html>"""
+<p style="color:#8b949e;max-width:480px;text-align:center">Aucune session active.
+Lancez <code>lulucode web</code> dans un terminal, puis ouvrez
+<code>http://127.0.0.1:8341/</code>.</p></body></html>"""
