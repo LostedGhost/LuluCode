@@ -13,12 +13,12 @@ from __future__ import annotations
 from typing import Any
 
 LOGO = """\
- ██╗     ██╗   ██╗██╗     ██╗   ██╗ ██████╗ ██████╗ ██████╗ ███████╗
- ██║     ██║   ██║██║     ██║   ██║██╔════╝██╔═══██╗██╔══██╗██╔════╝
- ██║     ██║   ██║██║     ██║   ██║██║     ██║   ██║██████╔╝█████╗
- ██║     ██║   ██║██║     ██║   ██║██║     ██║   ██║██╔══██╗██╔══╝
- ███████╗╚██████╔╝██║     ╚██████╔╝╚██████╗╚██████╔╝██║  ██║███████╗
- ╚══════╝ ╚═════╝ ╚═╝      ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
+██╗      ██╗    ██╗██╗      ██╗    ██╗ ██████╗  ██████╗  ██████╗  ███████╗
+██║      ██║    ██║██║      ██║    ██║██╔════╝ ██╔═══██╗ ██╔══██╗ ██╔════╝
+██║      ██║    ██║██║      ██║    ██║██║      ██║   ██║ ██████╔╝ █████╗
+██║      ██║    ██║██║      ██║    ██║██║      ██║   ██║ ██╔══██╗ ██╔══╝
+███████╗ ╚██████╔╝███████╗ ╚██████╔╝ ╚██████╗ ╚██████╔╝ ██║  ██║ ███████╗
+╚══════╝  ╚═════╝ ╚══════╝  ╚═════╝   ╚═════╝  ╚═════╝  ╚═╝  ╚═╝ ╚══════╝
 """
 
 CYAN = "#22d3ee"
@@ -40,10 +40,13 @@ class Session:
     # --- bannière -----------------------------------------------------------
 
     def banniere(self) -> None:
-        """Logo ASCII cyan, sous-titre et aide, centrés."""
+        """Efface l'écran (mode plein écran) et affiche le logo centré."""
         from rich.align import Align
         from rich.text import Text
 
+        # Mode plein écran : on efface ce qui précède (historique du
+        # shell encore visible derrière, comme Claude Code au lancement).
+        self.console.clear()
         self.console.print()
         self.console.print(Align.center(Text(LOGO.rstrip(), style=f"bold {CYAN}")))
         self.console.print(Align.center(Text(
