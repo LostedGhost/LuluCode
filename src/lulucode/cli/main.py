@@ -174,7 +174,10 @@ class _EmetteurTerminal:
         from lulucode.core.events import Kind
 
         if evenement.type is Kind.TEXTE:
-            self.rendu.texte_agent(evenement.donnees.get("texte", ""))
+            # En streaming, le fragment a déjà été écrit au fil de l'eau ;
+            # on n'imprime ici qu'en mode non-streamé (deja_affiche absent).
+            if not evenement.donnees.get("deja_affiche"):
+                self.rendu.texte_agent(evenement.donnees.get("texte", ""))
         elif evenement.type is Kind.OUTIL_APPEL:
             args = evenement.donnees.get("arguments", {})
             # Cible lisible au gabarit des SVG : le chemin ou la commande
