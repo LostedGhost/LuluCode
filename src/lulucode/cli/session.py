@@ -1,18 +1,15 @@
-"""Session plein écran de LuluCode, à la façon des agents modernes.
+"""Session interactive de LuluCode : bannière logo, saisie encadrée,
+historique de saisie — affichage simple et fiable (pas de streaming).
 
-L'écran est un journal défilant (bannière, historique des échanges,
-actions d'outils) ; l'invite reste fixée en bas, entre deux lignes
-tracées, avec historique de saisie (flèches haut/bas comme en shell).
-Les réponses du modèle arrivent en streaming, texte au fil de l'eau.
-
-Principe : Rich Live re-rend le Group (journal + panneau de saisie) à
-chaque changement ; le terminal garde l'écran, seul le contenu bouge.
-Sans prompt_toolkit, repli sur la saisie Click (pas d'historique).
+L'affichage est séquentiel : la bannière au lancement, puis chaque
+élément (saisie, action outil, réponse en Markdown, diff) s'imprime une
+seule fois, comme dans un shell. Ajout LuluCodeFace Claude Code :
+l'invite est entourée de deux règles cyan et la saisie garde un
+historique persistant (flèches ↑/↓).
 """
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 LOGO = """\
@@ -30,7 +27,7 @@ GRIS = "#8b949e"
 
 
 class Session:
-    """Boucle interactive plein écran : journal + saisie fixée en bas."""
+    """Boucle interactive : bannière, saisie encadrée, affichage direct."""
 
     def __init__(self, agent: Any, rendu: Any, *, version: str, profil: str, mode: str) -> None:
         self.agent = agent
@@ -38,129 +35,88 @@ class Session:
         self.version = version
         self.profil = profil
         self.mode = mode
-        self.blocs: list[Any] = []       # journal : blocs déjà figés
-        self.courant: Any = None         # bloc en cours (streaming)
-        self.tampon_stream = ""          # fragments de streaming accumulés
-        self.suggestion = ""             # last saisie en attente d'Enter
+        self.console = rendu.console
 
-    # --- composition d'écran ------------------------------------------------
+    # --- bannière -----------------------------------------------------------
 
-    def ecran(self, saisie: str = "") -> Any:
-        """Compose l'écran : bannière ou journal, puis panneau de saisie."""
-        from rich.console import Group
+    def banniere(self) -> None:
+        """Logo ASCII cyan, sous-titre et aide, centrés."""
+        from rich.align import Align
+        from rich.text import Text
+
+        self.console.print()
+        self.console.print(Align.center(Text(LOGO.rstrip(), style=f"bold {CYAN}")))
+        self.console.print(Align.center(Text(
+            f"v{self.version} · profil {self.profil} · mode {self.mode}", style=GRIS
+        )))
+        self.console.print(Align.center(Text(
+            "Un agent de code qui tourne chez vous.", style=TEXTE_BLANC
+        )))
+        self.console.print(Align.center(Text(
+            "exit pour sortir · /aide pour l'aide · ↑/↓ historique", style=GRIS
+        )))
+        self.console.print()
+
+    # --- invite -------------------------------------------------------------
+
+    def invite(self) -> None:
+        """L'invite entre deux règles cyan, avant chaque saisie."""
         from rich.rule import Rule
         from rich.text import Text
 
-        blocs: list[Any] = []
-        if not self.blocs and self.courant is None:
-            from rich.align import Align
-            from rich.panel import Panel
+        self.console.print(Rule(style=CYAN))
+        self.console.print(Text("> ", style=f"bold {CYAN}"), end="")
+        # La règle du bas est tracée après la saisie (dans la boucle).
+        self._saisie_en_cours = True
 
-            corps = Text()
-            corps.append("Un agent de code qui tourne chez vous.\n", style=TEXTE_BLANC)
-            corps.append("exit", style=f"bold {CYAN}")
-            corps.append(" pour sortir   ", style=GRIS)
-            corps.append("/aide", style=f"bold {CYAN}")
-            corps.append(" pour l'aide", style=GRIS)
-            logo = Text(LOGO.rstrip(), style=f"bold {CYAN}")
-            sous_titre = Text(
-                f"v{self.version} · profil {self.profil} · mode {self.mode}",
-                style=GRIS,
-            )
-            blocs = [
-                Align.center(logo),
-                Align.center(sous_titre),
-                Align.center(corps),
-            ]
-        else:
-            blocs = list(self.blocs)
-            if self.courant is not None:
-                blocs.append(self.courant)
+    def fin_invite(self) -> None:
+        """Règle du bas après la lecture de la saisie."""
+        from rich.rule import Rule
 
-        # Panneau de saisie, toujours en bas : deux règles cyan entre
-        # lesquelles l'invite et la saisie en cours.
-        zone = Text()
-        zone.append("> ", style=f"bold {CYAN}")
-        zone.append(saisie or "…", style=TEXTE_BLANC)
-        return Group(*blocs, Text(""), Rule(style=CYAN), zone, Rule(style=CYAN))
+        self.console.print(Rule(style=CYAN))
 
-    # --- journal -----------------------------------------------------------
-
-    def fige_courant(self) -> None:
-        """Fige le bloc courant dans le journal et le vide."""
-        if self.courant is not None:
-            self.blocs.append(self.courant)
-            self.courant = None
-            self.tampon_stream = ""
-
-    def ajoute_bloc(self, bloc: Any) -> None:
-        """Ajoute un bloc figé au journal (action outil, diff, erreur...)."""
-        self.figes_avant()
-        self.blocs.append(bloc)
-
-    def figes_avant(self) -> None:
-        self.fige_courant()
-
-    # --- exécution -----------------------------------------------------------
+    # --- exécution ----------------------------------------------------------
 
     async def execute(self, tache: str) -> None:
-        """Exécute une tâche en remplissant le journal en continu."""
-        from rich.live import Live
+        """Exécute une tâche ; l'émetteur imprime les événements à la volée."""
+        await self.agent.execute(
+            tache,
+            emetteur=_EmetteurSession(self.rendu),
+            permission=_permission_session(self.rendu),
+        )
+        self.console.print()  # respiration après chaque tâche
 
-        self.ajoute_bloc(self.rendu.bloc_utilisateur(tache))
+    # --- boucle -------------------------------------------------------------
 
-        with Live(
-            self.ecran(),
-            console=self.rendu.console,
-            refresh_per_second=12,
-            screen=False,
-            vertical_overflow="visible",
-        ) as live:
-            ecrivain = _EcrivainStream(self, live)
-            await self.agent.execute(
-                tache,
-                emetteur=_EmetteurSession(self),
-                permission=_permission_session(self.rendu),
-                sur_ecriture=ecrivain.fragment,
-            )
-        fige_en_markdown(self)  # le reste du flux : brut -> Markdown figé
-
-    # --- boucle ------------------------------------------------------------
     async def boucle(self) -> None:
         from lulucode.cli.main import veut_sortir
 
+        self.banniere()
         while True:
-            requis = self.saisie()
+            self.invite()
+            try:
+                requis = self.saisie_texte()
+            finally:
+                self.fin_invite()
             if not requis:
                 continue
             if veut_sortir(requis):
                 self.rendu.au_revoir()
                 return
             if requis.strip().lower() == "/aide":
-                self.ajoute_bloc(self.rendu.bloc_utilisateur("/aide"))
-                self.ajoute_bloc(self.rendu.blob_texte(
+                self.rendu.texte_agent(
                     "**Commandes**\n\n"
                     "- `/aide` — cette liste\n"
                     "- `exit` ou `/quitter` — sortir\n"
                     "- ↑/↓ — historique de saisie"
-                ))
-                self.figes_avant()
-                self.affiche_fige()
+                )
                 continue
             await self.execute(requis)
 
-    def affiche_fige(self) -> None:
-        """Re-rend l'écran une fois hors Live (commandes locales)."""
-        from rich.console import Console
-        self.rendu.console.print(self.ecran(self.suggestion))
+    # --- saisie -------------------------------------------------------------
 
-    def saisie(self) -> str:
-        """Lecture de saisie : prompt_toolkit si dispo, sinon Click.
-
-        prompt_toolkit exige une vraie console (Win32 sous Windows) :
-        sans elle, repli propre sur la saisie Click simple.
-        KeyboardInterrupt / EOFError remontent à la boucle (sortie).
-        """
+    def saisie_texte(self) -> str:
+        """Lecture : prompt_toolkit (historique) si console compatible."""
         try:
             from prompt_toolkit import PromptSession
             from prompt_toolkit.history import FileHistory
@@ -171,18 +127,17 @@ class Session:
             if not hasattr(self, "_pt_session"):
                 from pathlib import Path
 
-                hist_dir = Path.home() / ".lulucode"
-                hist_dir.mkdir(parents=True, exist_ok=True)
+                dossier = Path.home() / ".lulucode"
+                dossier.mkdir(parents=True, exist_ok=True)
                 self._pt_session = PromptSession(
-                    history=FileHistory(str(hist_dir / "historique")),
+                    history=FileHistory(str(dossier / "historique")),
                     enable_history_search=True,
                 )
-            return self._pt_session.prompt("> ").strip()
+            return self._pt_session.prompt("").rstrip()
         except (KeyboardInterrupt, EOFError):
             raise  # sortie demandée : la boucle la traite
         except Exception:
-            # Console non compatible (pipe, tmux exotique, Cygwin...) :
-            # repli propre sans planter la session.
+            # Console non compatible : saisie Click simple.
             return self._saisie_click()
 
     @staticmethod
@@ -190,90 +145,41 @@ class Session:
         import click
 
         try:
-            return click.prompt(click.style("> ", fg="cyan", bold=True), default="",
-                                show_default=False).strip()
+            return click.prompt("", default="", show_default=False).strip()
         except (KeyboardInterrupt, EOFError):
             raise
 
 
-class _EcrivainStream:
-    """Accumule les fragments du modèle et met à jour le bloc courant.
-
-    Pendant le flux, le bloc courant est du TEXTE BRUT (no_wrap, pas de
-    reflow Markdown) : chaque fragment reste inchangé à l'écran, comme
-    une machine à écrire. À la fin du flux, le bloc est figé puis
-    re-rendu en Markdown complet (titres, tableaux, gras).
-    """
-
-    def __init__(self, session: Session, live: Any) -> None:
-        self.session = session
-        self.live = live
-
-    def fragment(self, fragment: str) -> None:
-        self.session.figes_avant()
-        self.session.tampon_stream += fragment
-        from rich.text import Text
-
-        # Bloc courant en Text no_wrap : le texte déjà écrit ne reflowe
-        # jamais ; le Live re-rend à sa cadence (refresh_per_second),
-        # live.update() ne fait que remplacer le renderable.
-        self.session.courant = Text(
-            self.session.tampon_stream, style=TEXTE_BLANC, no_wrap=True, overflow="ignore"
-        )
-        self.live.update(self.session.ecran())
-
-
-def fige_en_markdown(session: "Session") -> None:
-    """Fige le bloc courant en le convertissant en Markdown rendu."""
-    if session.courant is None:
-        return
-    contenu = session.tampon_stream
-    session.courant = None
-    session.tampon_stream = ""
-    if contenu.strip():
-        from lulucode.cli.render import blob_texte
-
-        session.blocs.append(blob_texte(contenu))
-
-
 class _EmetteurSession:
-    """Traduit les événements du cœur en blocs du journal plein écran."""
+    """Imprime chaque événement du cœur une seule fois, dans l'ordre."""
 
-    def __init__(self, session: Session) -> None:
-        self.session = session
+    def __init__(self, rendu: Any) -> None:
+        self.rendu = rendu
 
     def emettre(self, evenement: Any) -> None:
         from lulucode.core.events import Kind
 
-        r = self.session.rendu
         if evenement.type is Kind.TEXTE:
-            if evenement.donnees.get("deja_affiche"):
-                # Fin du stream : le texte brut courant devient un bloc
-                # Markdown figé (titres, tableaux, gras) dans le journal.
-                fige_en_markdown(self.session)
-            else:
-                # Mode non-streamé : Markdown direct.
-                self.session.figes_avant()
-                self.session.ajoute_bloc(r.blob_texte(evenement.donnees.get("texte", "")))
+            if not evenement.donnees.get("deja_affiche"):
+                self.rendu.texte_agent(evenement.donnees.get("texte", ""))
         elif evenement.type is Kind.OUTIL_APPEL:
             args = evenement.donnees.get("arguments", {})
             cible = (args.get("chemin") or args.get("commande")
-                     or args.get("motif") or ", ".join(f"{k}={str(v)[:40]}" for k, v in args.items()))
-            self.session.ajoute_bloc(r.outil_bloque(evenement.donnees.get("outil", ""), str(cible)))
+                     or args.get("motif")
+                     or ", ".join(f"{k}={str(v)[:40]}" for k, v in args.items()))
+            self.rendu.outil(evenement.donnees.get("outil", ""), str(cible))
         elif evenement.type is Kind.DIFF:
-            self.session.ajoute_bloc(r.diff_bloque(
+            self.rendu.diff(
                 evenement.donnees.get("chemin", ""), evenement.donnees.get("diff", "")
-            ))
+            )
         elif evenement.type is Kind.PLAFOND:
-            self.session.ajoute_bloc(r.plafond_bloque(str(evenement.donnees.get("raison", ""))))
+            self.rendu.plafond(str(evenement.donnees.get("raison", "")))
         elif evenement.type is Kind.ERREUR:
-            self.session.ajoute_bloc(r.erreur_bloque(str(evenement.donnees.get("message", ""))))
+            self.rendu.erreur(str(evenement.donnees.get("message", "")))
 
 
 def _permission_session(rendu: Any):
     async def _demande(demande: dict) -> bool:
-        # La permission doit se faire dans Live : elle s'affiche dans la
-        # console Rich du rendu, ce qui force la sortie propre du Live.
         choix = rendu.permission(demande)
         return choix in ("o", "s")
 
