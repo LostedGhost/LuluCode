@@ -25,6 +25,7 @@ class Profil:
     api_key: str = "ollama"
     contexte: int = 8192
     outils_natifs: bool = True
+    vision: bool = False
 
 
 @dataclass(slots=True)
@@ -83,6 +84,7 @@ def profil_actif(config: dict[str, Any], nom: str | None = None) -> Profil:
         api_key=cle,
         contexte=int(donnees.get("contexte", 8192)),
         outils_natifs=bool(donnees.get("outils_natifs", True)),
+        vision=bool(donnees.get("vision", False)),
     )
 
 
@@ -141,14 +143,19 @@ class ClientModele:
         outils: list[dict[str, Any]] | None = None,
         *,
         sur_ecriture: Any | None = None,
+        images: list[dict[str, str]] | None = None,
     ) -> ReponseModele:
         """Appelle le modèle et extrait texte ou appel d'outil.
 
         Avec `sur_ecriture` (callable recevant chaque fragment de texte),
-        l'appel est en streaming : le texte s'affiche au fur et à mesure,
-        comme sur les agents modernes. Si le serveur ne tient pas le
-        format SSE, on retombe silencieusement sur un appel normal.
+        l'appel est en streaming ; si le serveur ne tient pas le format
+        SSE, on retombe silencieusement sur un appel normal.
+
+        `images` : liste de {mime, base64} — injectée dans le dernier
+        message utilisateur au format vision OpenAI (image_url base64).
         """
+        if images:
+            messages = _messages_avec_images(messages, images)
         if sur_ecriture is not None:
             try:
                 return self._completions_stream(
@@ -248,3 +255,35 @@ class ClientModele:
 
     def close(self) -> None:
         self._client.close()
+
+
+def _messages_avec_images(
+    messages: list[dict[str, Any]],
+    images: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    """Injecte les images dans le dernier message utilisateur.
+
+    Format vision OpenAI : le content devient une liste de parties
+    {type: image_url, image_url: {url: data:<mime>;base64,...}} et
+    {type: text}. Les autres messages restent inchangés.
+    """
+    copie = list(messages)
+    for index in range(len(copie) - 1, -1, -1):
+        if copie[index].get("role") == "user":
+            parties: list[dict[str, Any]] = []
+            for image in images:
+                mime = image.get("mime", "image/png")
+                base64 = image.get("base64", "")
+                parties.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{base64}"},
+                })
+            parties.append({"type": "text", "text": copie[index].get("content", "")})
+            copie[index] = {**copie[index], "content": parties}
+            return copie
+    # Aucun message utilisateur (rare) : on ajoute un message dédié.
+    parties = [{"type": "image_url",
+                "image_url": {"url": f"data:{img.get('mime', 'image/png')};base64,{img.get('base64', '')}"}}
+               for img in images]
+    copie.append({"role": "user", "content": parties})
+    return copie

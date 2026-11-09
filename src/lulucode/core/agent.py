@@ -48,6 +48,25 @@ OUTILS: dict[str, dict[str, Any]] = {
             "required": ["chemin"],
         },
     },
+    "lire_document": {
+        "description": (
+            "Lit un document non-texte : PDF (texte ou scanné), Word (.docx), "
+            "image (PNG/JPG/WebP) transmise au modèle vision si le profil "
+            "en a un. Niveau 0. Préférer lire_fichier pour du texte brut."
+        ),
+        "niveau": Niveau.LECTURE,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "chemin": {"type": "string", "description": "chemin relatif du document"},
+                "question": {
+                    "type": "string",
+                    "description": "question facultative sur une image (vision)",
+                },
+            },
+            "required": ["chemin"],
+        },
+    },
     "chercher_code": {
         "description": "Cherche un motif dans les fichiers de la zone. Niveau 0.",
         "niveau": Niveau.LECTURE,
@@ -211,6 +230,22 @@ class Agent:
                 return reponse.texte
 
             resultat = await self._appelle_outil(reponse, emetteur, permission)
+
+            # Demande de vision (lire_document sur une image) : on relance
+            # le modèle avec l'image et la question, sans écrire le
+            # base64 dans l'historique.
+            if resultat.startswith("__VISION__|"):
+                _, mime, base64, question = resultat.split("|", 3)
+                vision = await self._comprenne_image(
+                    mime, base64, question or "Décris cette image en détail.",
+                )
+                if vision.startswith("erreur :"):
+                    emetteur.emettre(Evenement(Kind.ERREUR, {"message": vision[9:]}))
+                    return vision
+                emetteur.emettre(Evenement(Kind.TEXTE, {"texte": vision}))
+                emetteur.emettre(Evenement(Kind.TACHE_TERMINEE, {"etapes": etape}))
+                return vision
+
             messages.append({"role": "assistant", "content": reponse.texte or "",
                              "tool_calls": _appel_brut(reponse)})
             messages.append({"role": "tool", "tool_call_id": f"{etape}",
@@ -261,11 +296,18 @@ class Agent:
         return self._execute_outil(nom, args, emetteur, autorise=True)
 
     def _execute_outil(self, nom: str, args: dict[str, Any], emetteur: Any, *, autorise: bool) -> str:
-        """Exécute l'outil autorisé et émet le résultat."""
+        """Exécute l'outil autorisé et émet le résultat.
+
+        Cas particulier `lire_document` sur une image : renvoie le
+        marqueur `__VISION__` traité par `execute()` (le contenu binaire
+        va au modèle, pas au journal).
+        """
         zone = self.zone
         if nom == "lire_fichier":
             r = fichiers.lire_fichier(zone / args["chemin"], zone)
             resultat = r.contenu if r.ok else f"erreur : {r.erreur}"
+        elif nom == "lire_document":
+            return self._lit_document(args)
         elif nom == "lister_dossier":
             r = fichiers.lister_dossier(zone / args["chemin"], zone)
             resultat = r.contenu if r.ok else f"erreur : {r.erreur}"
@@ -303,6 +345,47 @@ class Agent:
             resultat = f"outil non implémenté : {nom}"
         emetteur.emettre(Evenement(Kind.OUTIL_RESULTAT, {"outil": nom, "resultat": resultat}))
         return resultat
+
+    def _comprenne_image(self, mime: str, base64: str, question: str) -> str:
+        """Vision : relance le modèle avec l'image en base64.
+
+        Un seul tour : l'image + la question, réponse texte directe
+        (pas d'appel d'outil attendu dans ce tour).
+        """
+        try:
+            reponse = self.client.completions(
+                [{"role": "user", "content": question}],
+                images=[{"mime": mime, "base64": base64}],
+            )
+        except ErreurModele as e:
+            return f"erreur : vision impossible ({e})"
+        return reponse.texte or "(le modèle n'a rien renvoyé pour cette image)"
+
+    def _lit_document(self, args: dict[str, Any]) -> str:
+        """Route lire_document : texte extrait, ou demande de vision.
+
+        Renvoie soit le contenu texte, soit `__VISION__|chemin|mime|question`
+        — ce marqueur est intercepté par execute() qui relance le modèle
+        avec l'image (uniquement si le profil le permet).
+        """
+        from lulucode.tools.documents import lit_document, données_image_base64, type_de_document
+
+        chemin = self.zone / args["chemin"]
+        question = str(args.get("question", "") or "")
+        r = lit_document(
+            chemin, self.zone,
+            profil_vision=self.client.profil.vision,
+            question=question,
+        )
+        if not r.ok:
+            return f"erreur : {r.erreur}"
+        if r.contenu:
+            return r.contenu  # texte extrait (pdf/docx)
+        # Image + profil vision : le binaire va au modèle via le marqueur.
+        if (donnees := données_image_base64(chemin)) is not None:
+            mime, base64 = donnees
+            return f"__VISION__|{mime}|{base64}|{question}"
+        return "erreur : image illisible"
 
 
 def _appel_brut(reponse: ReponseModele) -> list[dict[str, Any]]:

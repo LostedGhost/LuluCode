@@ -30,6 +30,7 @@ dependencies = [
 
 [project.optional-dependencies]
 web = ["fastapi>=0.111", "uvicorn>=0.30", "pydantic>=2.8"]
+documents = ["pypdf>=5.0", "python-docx>=1.1"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
