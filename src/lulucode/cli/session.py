@@ -45,35 +45,35 @@ class Session:
         self.console = rendu.console
 
     # --- plein écran ---------------------------------------------------------
+    #
+    # Choix de conception : PAS de buffer alternatif par défaut. Le mode
+    # plein écran (ESC[?1049) supprimait le scroll natif du terminal —
+    # impossible de remonter aux messages passés, ce qui est la réaction
+    # attendue. On imprime en flux normal : l'historique du shell ET celui
+    # de la session restent remontables à la molette/`Maj+PgUp`. Le logo
+    # se déploie au premier lancement uniquement.
 
     def entre_plein_ecran(self) -> None:
-        """Bascule le terminal sur le buffer alternatif (écran vierge)."""
-        import sys as _sys
+        """Sans buffer alternatif : le scroll natif du terminal reste dispo.
 
-        if not self.console.is_terminal:
-            return
-        _sys.stdout.write("\x1b[?1049h\x1b[H")  # buffer alt + curseur en haut
-        _sys.stdout.flush()
+        Un buffer alternatif (ESC[?1049h) est réservé aux interfaces type
+        éditeur ; pour une conversation, il fait perdre l'accès à tout
+        ce qui précède. On ne bascule donc pas.
+        """
+        return
 
     def sort_plein_ecran(self) -> None:
-        """Revient au buffer principal : l'historique du shell réapparaît."""
-        import sys as _sys
-
-        if not self.console.is_terminal:
-            return
-        _sys.stdout.write("\x1b[?1049l")
-        _sys.stdout.flush()
+        """Rien à faire : on n'a jamais quitté le buffer principal."""
+        return
 
     # --- bannière -----------------------------------------------------------
 
     def banniere(self) -> None:
-        """Efface l'écran (mode plein écran) et affiche le logo centré."""
+        """Logo centré, en flux normal (pas d'effacement du terminal :
+        le scroll natif doit rester intact)."""
         from rich.align import Align
         from rich.text import Text
 
-        # Mode plein écran : on efface ce qui précède (historique du
-        # shell encore visible derrière, comme Claude Code au lancement).
-        self.console.clear()
         self.console.print()
         self.console.print(Align.center(Text(LOGO.rstrip(), style=f"bold {CYAN}")))
         self.console.print(Align.center(Text(

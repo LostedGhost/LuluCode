@@ -114,7 +114,9 @@ body {
 
 /* --- zone conversation ---------------------------------------------------- */
 
-.conteneur-conversation { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+.conteneur-conversation { flex: 1; overflow-y: auto;
+                          min-height: 0;  /* requFlex : autorise le scroll */
+                          scroll-behavior: smooth; }
 .conversation { max-width: 820px; margin: 0 auto; width: 100%;
                 padding: var(--e-5) var(--e-4) var(--e-6); }
 
@@ -192,13 +194,18 @@ body {
 }
 .agent pre code { background: transparent; color: var(--texte);
                   padding: 0; border-radius: 0; }
+/* tableaux GFM : style Claude Code — lignes horizontales de séparation,
+   pas de cadre extérieur ; séparateurs de colonnes discrets */
 .agent table { border-collapse: collapse; margin: var(--e-2) 0 var(--e-4);
                width: 100%; font-size: var(--taille-sm);
-               display: block; overflow-x: auto; }
-.agent th { background: rgba(34, 211, 238, 0.10); color: var(--cyan);
-            text-align: left; font-weight: 700; }
-.agent th, .agent td { border: 1px solid var(--bordure); padding: 6px 11px; }
-.agent tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }
+               display: block; overflow-x: auto; border: 0; }
+.agent thead tr { border-bottom: 2px solid var(--bordure-forte); }
+.agent th { color: var(--cyan); text-align: left; font-weight: 700;
+            border: 0; padding: 7px 12px; }
+.agent td { border: 0; padding: 7px 12px; }
+.agent tbody tr { border-bottom: 1px solid var(--bordure); }
+.agent tbody tr:last-child { border-bottom: 0; }
+.agent tbody tr:nth-child(even) td { background: var(--zebre); }
 .agent hr { border: 0; border-top: 1px solid var(--bordure); margin: var(--e-4) 0; }
 .agent a { color: var(--cyan); }
 
