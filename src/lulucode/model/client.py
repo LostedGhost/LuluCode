@@ -67,7 +67,15 @@ def profil_actif(config: dict[str, Any], nom: str | None = None) -> Profil:
         raise ValueError(f"profil inconnu : {nom!r} (disponibles : {', '.join(profils)})")
     donnees = profils[nom]
     cle_env = donnees.get("api_key_env")
-    cle = os.environ[cle_env] if cle_env else donnees.get("api_key", "ollama")
+    if cle_env:
+        cle = os.environ.get(cle_env)
+        if not cle:
+            raise ValueError(
+                f"la variable d'environnement {cle_env} n'est pas définie "
+                f"(qu'est attendue pour la clé du profil {nom!r})"
+            )
+    else:
+        cle = donnees.get("api_key", "ollama")
     return Profil(
         nom=nom,
         base_url=donnees["base_url"],
