@@ -214,13 +214,13 @@ class _EcrivainStream:
         self.session.tampon_stream += fragment
         from rich.text import Text
 
+        # Bloc courant en Text no_wrap : le texte déjà écrit ne reflowe
+        # jamais ; le Live re-rend à sa cadence (refresh_per_second),
+        # live.update() ne fait que remplacer le renderable.
         self.session.courant = Text(
             self.session.tampon_stream, style=TEXTE_BLANC, no_wrap=True, overflow="ignore"
         )
-        # Pas de live.update() ici : le Live rafraîchit à sa propre
-        # cadence (refresh_per_second), sinon chaque fragment force un
-        # reflow complet et casse la mise en page.
-        self.live.refresh()
+        self.live.update(self.session.ecran())
 
 
 def fige_en_markdown(session: "Session") -> None:
