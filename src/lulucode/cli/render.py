@@ -445,22 +445,18 @@ def _tableaux_delimites() -> None:
         return
     _tableaux_patched = True
 
-    #   (côtés ouverts : pas de haut/bas ni d'angles)
-    #   ligne 2 (head)      : barres verticales sous le texte d'en-tête
-    #   ligne 3 (head_row)  : règle épaisse ━ sous l'en-tête
-    #   ligne 4 (mid)       : barres verticales entre les rangées
-    #   ligne 5 (row)       : règle fine ─ entre chaque rangée de données
-    #   ligne 6 (foot_row)  : règle fine ─ avant un pied de tableau éventuel
-    #   ligne 7 (foot)      : barres verticales pour le pied de tableau
+    # Côtés ouverts (pas de haut/bas ni d'angles), colonnes délimitées et
+    # JOINTES aux règles : la barre verticale ▶ croise le trait
+    # (┿ sur l'épaisse, ┼ sur les fines).
     TABLEAU_LULUCODE = Box(
-        "    \n"
-        " ││ \n"
-        " ━━ \n"
-        " ││ \n"
-        " ── \n"
-        " ── \n"
-        " ││ \n"
-        "    \n"
+        "    \n"    # top      : ni bord haut, ni coins
+        " ││ \n"    # head     : barres de colonnes continues
+        " ─┿─\n"    # head_row : règle, croisement en T aux colonnes
+        " ││ \n"    # mid      : barres continues entre les règles
+        " ─┼─\n"    # row      : règle fine, croisement plein aux colonnes
+        " ─┼─\n"    # foot_row : idem avant un pied éventuel
+        " ││ \n"    # foot     : barres du pied
+        "    \n"    # bottom   : rien
     )
 
     original = Table.__init__

@@ -123,28 +123,30 @@ TABLEAU_MD = (
 class TestTableaux:
     def test_rangées_separees_par_une_ligne(self, rendu_capte):
         """Un tableau de 3 rangées trace >= 2 lignes horizontales :
-        une sous l'en-tête, une (au moins) entre les rangées.
+        une sous l'en-tête, une (au moins) entre les rangées. Les
+        jonctions ┿/┼ sur les règles sont la signature du box jointé.
         """
         r, buf = rendu_capte
         r.texte_agent(TABLEAU_MD)
         texte = texte_sans_ansi(buf.getvalue())
         lignes_horizontales = [
             ligne for ligne in texte.splitlines()
-            if ligne.strip() and set(ligne.strip()) <= {"─", "━"}
+            if ligne.strip() and set(ligne.strip()) <= {"─", "━", "┿", "┼"}
         ]
         assert len(lignes_horizontales) >= 2, texte
 
-    def test_regles_differentes_entete_vs_rangees(self, rendu_capte):
-        """La règle sous l'en-tête est épaisse (━), les séparateurs de
-        rangées sont fins (─) : hiérarchie visuelle de l'en-tête.
+    def test_jonctions_aux_colonnes(self, rendu_capte):
+        """Les règles horizontales traversent les colonnes (┿ sous
+        l'en-tête, ┼ entre les rangées) : colonnes jointes, pas
+        décalées.
         """
         r, buf = rendu_capte
         r.texte_agent(TABLEAU_MD)
         texte = texte_sans_ansi(buf.getvalue())
-        epaisses = [l for l in texte.splitlines() if l.strip() and set(l.strip()) == {"━"}]
-        fines = [l for l in texte.splitlines() if l.strip() and set(l.strip()) == {"─"}]
-        assert len(epaisses) >= 1, texte
-        assert len(fines) >= 2, texte  # entre chacune des 3 rangées de données
+        regles = [l for l in texte.splitlines()
+                  if l.strip() and set(l.strip()) <= {"─", "┿", "┼"}
+                  and ("┿" in l or "┼" in l)]
+        assert len(regles) >= 2, texte  # 1 sous en-tête + >= 1 entre rangées
 
     def test_pas_de_cadre_complet(self, rendu_capte):
         """Pas d'angles pleins ni de bord haut/bas : côtés ouverts, pas
@@ -186,6 +188,6 @@ class TestTableaux:
         texte = texte_sans_ansi(buf.getvalue())
         lignes_horizontales = [
             ligne for ligne in texte.splitlines()
-            if ligne.strip() and set(ligne.strip()) <= {"─", "━"}
+            if ligne.strip() and set(ligne.strip()) <= {"─", "━", "┿", "┼"}
         ]
         assert len(lignes_horizontales) >= 2, texte

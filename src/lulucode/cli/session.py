@@ -299,11 +299,15 @@ class Session:
             if not hasattr(self, "_pt_session"):
                 from pathlib import Path
 
+                from lulucode.cli.completion import completions_disponibles
+
                 dossier = Path.home() / ".lulucode"
                 dossier.mkdir(parents=True, exist_ok=True)
                 self._pt_session = PromptSession(
                     history=FileHistory(str(dossier / "historique")),
                     enable_history_search=True,
+                    completer=completions_disponibles(self.agent.zone),
+                    complete_while_typing=True,  # menu filtrant à la frappe
                 )
             invite_html = HTML(f'<style fg="{CYAN}" bold>{self.CHEVRON}</style>')
             return (await self._pt_session.prompt_async(invite_html)).rstrip()
