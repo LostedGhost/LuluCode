@@ -45,7 +45,7 @@ def config_init() -> None:
 
 @app.command()
 @click.option("--profil", "-p", default=None, help="(ancien nom) profil de modèle pour cette session")
-@click.option("--mode", "-m", default="normal", help="Mode de permission : normal, strict, lecture-seule")
+@click.option("--mode", "-m", default="normal", help="Mode de permission : normal, auto, bypass, strict, lecture-seule")
 @click.option("--tache", "-t", default=None, help="Exécute cette tâche unique puis quitte")
 @click.argument("profil_positionne", required=False, default=None)
 def run(profil: str | None, mode: str, tache: str | None, profil_positionne: str | None) -> None:
@@ -71,7 +71,7 @@ def run(profil: str | None, mode: str, tache: str | None, profil_positionne: str
     try:
         mode_perm = Mode(mode)
     except ValueError:
-        rendu.erreur(f"Mode inconnu : {mode} (normal, strict, lecture-seule)")
+        rendu.erreur(f"Mode inconnu : {mode} (normal, auto, bypass, strict, lecture-seule)")
         sys.exit(1)
 
     rendu.etat(lulucode.__version__, p.nom, mode_perm.value, str(seule))

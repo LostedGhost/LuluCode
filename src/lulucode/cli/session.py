@@ -167,7 +167,7 @@ class Session:
             self.sort_plein_ecran()  # le shell réapparaît tel quel
 
     def _change_mode(self, requete: str) -> None:
-        """/mode affiche le mode courant ; `/mode strict` le change.
+        """/mode affiche le mode courant ; `/mode auto` le change.
 
         Le changement est volontairement restreint : seule une commande
         explicite de l'utilisateur dans la session peut le faire, jamais
@@ -179,19 +179,18 @@ class Session:
         morceaux = requete.split(maxsplit=1)
         moteur = self.agent.moteur
         if len(morceaux) == 1:
+            modes = ", ".join(m.value for m in Mode)
             self.rendu.texte_agent(
                 f"Mode actuel : **{moteur.mode.value}**.\n\n"
-                "Modes disponibles : `normal`, `strict`, `lecture-seule`. "
-                "Exemple : `/mode strict`."
+                f"Modes disponibles : {modes}. Exemple : `/mode auto`."
             )
             return
         cible = morceaux[1].strip().lower()
         try:
             nouveau = Mode(cible)
         except ValueError:
-            self.rendu.erreur(
-                f"mode inconnu : {cible} (modes : normal, strict, lecture-seule)"
-            )
+            modes = ", ".join(m.value for m in Mode)
+            self.rendu.erreur(f"mode inconnu : {cible} (modes : {modes})")
             return
         ancien = moteur.mode
         moteur.mode = nouveau
@@ -199,6 +198,15 @@ class Session:
             Mode.NORMAL: "",
             Mode.STRICT: " Toutes les actions attendront maintenant une validation, lectures comprises.",
             Mode.LECTURE_SEULE: " Aucune écriture ni commande ne sera exécutée, lecture et plan uniquement.",
+            Mode.AUTO: (
+                " Les actions de niveau 0 à 2 (lectures, écritures, commandes"
+                " simples) seront validées automatiquement ; les actions"
+                " destructives (niveau 3) attendront toujours votre accord."
+            ),
+            Mode.BYPASS: (
+                " ⚠ Toutes les actions s'exécuteront sans validation, y compris"
+                " les destructives : c'est votre choix explicite."
+            ),
         }[nouveau]
         self.rendu.texte_agent(
             f"Mode changé : **{ancien.value}** → **{nouveau.value}**.{consequence}"

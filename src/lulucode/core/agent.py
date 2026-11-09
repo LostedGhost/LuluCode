@@ -120,19 +120,10 @@ def construit_prompt_systeme(
     for variable, valeur in substitutions.items():
         prompt = prompt.replace(variable, valeur)
 
-    # Le prompt référence les modes normal/auto/bypass ; le moteur actuel
-    # n'a pas d'« auto » ni de « bypass » : on aligne la doc du prompt sur
-    # les modes réellement implémentés en ajoutant une note d'exécution.
-    note = (
-        "\n\n---\n# Note d'exécution (ajoutée par LuluCode)\n\n"
-        "Modes réellement disponibles dans cette session : `normal` "
-        "(chaque action sensible attend une validation), `strict` (tout "
-        "attend une validation, lectures comprises) et `lecture-seule` "
-        "(lecture et plan uniquement). Les modes `auto` et `bypass` cités "
-        "plus haut ne sont pas encore implémentés : applique le comportement "
-        "`normal` s'ils sont annoncés.\n"
-    )
-    return prompt + note
+    # Le prompt référence les modes normal/auto/strict/lecture-seule et
+    # bypass : tous sont implémentés par le moteur — pas de note
+    # d'alignement nécessaire.
+    return prompt
 
 
 def prompt_avec_skills(prompt_systeme: str, zone: Path | None = None) -> str:

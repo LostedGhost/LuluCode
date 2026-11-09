@@ -21,13 +21,11 @@ class TestChargement:
         # Aucune variable restée non substituée.
         assert "{{" not in p
 
-    def test_note_modes_reels(self):
-        """Le prompt cite auto/bypass : la note aligne sur les modes réels."""
+    def test_pas_de_note_d_alignement(self):
+        """Tous les modes cités par le prompt sont implémentés : plus de note."""
         p = construit_prompt_systeme()
-        assert "Modes réellement disponibles" in p
-        assert "`normal`" in p
-        assert "`strict`" in p
-        assert "`lecture-seule`" in p
+        assert "not yet implemented" not in p.lower()
+        assert "pas encore implémentés" not in p
 
     def test_distinct_par_mode(self):
         a = construit_prompt_systeme(mode="normal")
