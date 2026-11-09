@@ -110,6 +110,41 @@ def lire_docx(chemin: Path, limite_paragraphes: int = 2000) -> ResultatDocument:
         return ResultatDocument(False, "", f"lecture impossible : {e}")
 
 
+def ocr_tesseract(chemin: Path, langue: str = "fra+eng") -> ResultatDocument:
+    """OCR local via Tesseract, s'il est installé sur la machine.
+
+    Priorité pour les images : extrait le texte (captures, scans, photos
+    de documents) sans consommer le modèle ; la description d'ensemble
+    d'une image reste le domaine de la vision.
+    """
+    try:
+        import pytesseract
+        from PIL import Image
+    except ImportError:
+        return ResultatDocument(
+            False, "",
+            "OCR local indisponible : pip install pytesseract pillow, "
+            "et le binaire Tesseract (https://github.com/UB-Mannheim/tesseract/wiki)",
+        )
+    try:
+        texte = pytesseract.image_to_string(Image.open(str(chemin)), lang=langue)
+    except pytesseract.TesseractNotFoundError:
+        return ResultatDocument(
+            False, "",
+            "le binaire Tesseract n'est pas installé ou pas dans le PATH : "
+            "https://github.com/UB-Mannheim/tesseract/wiki (WINDOWS : cocher "
+            "les langues French + English à l'installation)",
+        )
+    except Exception as e:
+        return ResultatDocument(False, "", f"OCR impossible : {e}")
+    texte = texte.strip()
+    if not texte:
+        return ResultatDocument(False, "aucun texte détecté par l'OCR — "
+                                "l'image ne contient probablement pas de texte "
+                                "(utilisez la vision pour une description)")
+    return ResultatDocument(True, texte)
+
+
 def données_image_base64(chemin: Path) -> tuple[str, str] | None:
     """(mimeType, base64) pour envoyer l'image au modèle vision."""
     try:
@@ -153,15 +188,20 @@ def lit_document(
     if genre == "docx":
         return lire_docx(chemin)
     if genre == "image":
-        if not profil_vision:
-            return ResultatDocument(
-                False, "",
-                "lecture d'image indisponible : ce profil de modèle n'est pas "
-                "déclaré avec vision (ajoutez `vision = true` au profil et "
-                "routhez vers un modèle vision, ex. gpt-4o-mini, qwen2.5-vl, "
-                "llama3.2-vision)",
-            )
-        return ResultatDocument(True, "")  # la façade enverra l'image au modèle
+        # Vision d'abord (le LLM décrit ET lit le texte) ; l'OCR local
+        # n'est qu'un recours si le profil n'a pas de vision.
+        if profil_vision:
+            return ResultatDocument(True, "")  # la façade enverra l'image au modèle
+        ocr = ocr_tesseract(chemin)
+        if ocr.ok:
+            return ResultatDocument(True, "[texte extrait par OCR local]\n" + ocr.contenu)
+        return ResultatDocument(
+            False, "",
+            "lecture d'image impossible dans cette session :\n"
+            "- vision de modèle : profil sans `vision = true` "
+            "(le serveur doit router vers un modèle vision)\n"
+            f"- OCR local : {ocr.erreur}",
+        )
     return ResultatDocument(
         False, "",
         f"type de fichier non pris en charge : {chemin.suffix!r} "

@@ -346,7 +346,21 @@ class Agent:
         emetteur.emettre(Evenement(Kind.OUTIL_RESULTAT, {"outil": nom, "resultat": resultat}))
         return resultat
 
-    def _comprenne_image(self, mime: str, base64: str, question: str) -> str:
+    async def _comprenne_image(self, mime: str, base64: str, question: str) -> str:
+        """Vision : relance le modèle avec l'image en base64.
+
+        Un seul tour : l'image + la question, réponse texte directe
+        (pas d'appel d'outil attendu dans ce tour). L'appel client est
+        synchrone (httpx bloquant) — exécuté hors de l'event loop via
+        un exécuteur pour ne pas geler la façade web.
+        """
+        import asyncio as _asyncio
+
+        return await _asyncio.get_running_loop().run_in_executor(
+            None, self._vision_synchrone, mime, base64, question
+        )
+
+    def _vision_synchrone(self, mime: str, base64: str, question: str) -> str:
         """Vision : relance le modèle avec l'image en base64.
 
         Un seul tour : l'image + la question, réponse texte directe
