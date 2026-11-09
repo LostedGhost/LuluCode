@@ -223,7 +223,7 @@ class _EcrivainStream:
         self.live.refresh()
 
 
-def fige_en_markdown(session: Session) -> None:
+def fige_en_markdown(session: "Session") -> None:
     """Fige le bloc courant en le convertissant en Markdown rendu."""
     if session.courant is None:
         return
@@ -231,7 +231,9 @@ def fige_en_markdown(session: Session) -> None:
     session.courant = None
     session.tampon_stream = ""
     if contenu.strip():
-        session.ajoute_bloc(blob_texte(contenu))
+        from lulucode.cli.render import blob_texte
+
+        session.blocs.append(blob_texte(contenu))
 
 
 class _EmetteurSession:
